@@ -46,7 +46,6 @@
                     Content="Cut"
                     FontSize="14"
                     Foreground="White"
-                    IsChecked="True"
                     Style="{StaticResource MenuButtonTheme}" />
                 <RadioButton
                     Height="50"
@@ -63,13 +62,15 @@
                     Style="{StaticResource MenuButtonTheme}" />
                 <RadioButton
                     Height="50"
+                    Command="{Binding HomeViewCommand}"
                     Content="Calculate"
                     FontSize="14"
                     Foreground="White"
+                    IsChecked="True"
                     Style="{StaticResource MenuButtonTheme}" />
                 <RadioButton
-                    Margin="0,220,0,0"
                     Height="50"
+                    Margin="0,220,0,0"
                     Command="{Binding MinimizeCommand}"
                     Content="Minimize"
                     FontSize="14"
@@ -83,9 +84,7 @@
                     Foreground="White"
                     Style="{StaticResource MenuButtonTheme}" />
             </StackPanel>
-            <StackPanel>
-                
-            </StackPanel>
+            <StackPanel />
             <TextBox
                 Grid.Column="1"
                 Width="250"
