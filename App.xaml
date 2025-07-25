@@ -1,0 +1,24 @@
+﻿<Application
+    x:Class="Filmauswertung_ModernUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Filmauswertung_ModernUI"
+    xmlns:view="clr-namespace:Filmauswertung_ModernUI.MVVM.View"
+    xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
+    StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme/MenuButtonTheme.xaml" />
+                <ResourceDictionary Source="Theme/TextboxTheme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <DataTemplate DataType="{x:Type viewModel:HomeViewModel}">
+                <view:HomeView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:DiscoveryViewModel}">
+                <view:DisoveryView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
