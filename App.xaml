@@ -5,7 +5,7 @@
     xmlns:local="clr-namespace:Filmauswertung_ModernUI"
     xmlns:view="clr-namespace:Filmauswertung_ModernUI.MVVM.View"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
-    StartupUri="MainWindow.xaml">
+    StartupUri="MVVM/View/MainView.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -18,6 +18,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewModel:DiscoveryViewModel}">
                 <view:DisoveryView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
+                <view:ViewCutRotateView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
