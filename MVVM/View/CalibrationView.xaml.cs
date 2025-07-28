@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace Filmauswertung_ModernUI.MVVM.View
 {
     /// <summary>
-    /// Interaktionslogik für DisoveryView.xaml
+    /// Interaktionslogik für CalibrationView.xaml
     /// </summary>
-    public partial class DisoveryView : UserControl
+    public partial class CalibrationView : UserControl
     {
-        public DisoveryView()
+        public CalibrationView()
         {
             InitializeComponent();
         }

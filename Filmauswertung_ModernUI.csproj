@@ -61,11 +61,15 @@
     </Compile>
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
-    <Page Include="MVVM\View\DisoveryView.xaml">
+    <Page Include="MVVM\View\DoseViewerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MVVM\View\HomeView.xaml">
+    <Page Include="MVVM\View\CalculateConvertView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MVVM\View\CalibrationView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -87,15 +91,21 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MVVM\ViewModel\DoseViewerViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\CalculateConvertViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\CalibrationViewModel.cs" />
     <Compile Include="MVVM\ViewModel\DiscoveryViewModel.cs" />
     <Compile Include="MVVM\ViewModel\HomeViewModel.cs" />
     <Compile Include="MVVM\ViewModel\MainViewModel.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModel.cs" />
-    <Compile Include="MVVM\View\DisoveryView.xaml.cs">
-      <DependentUpon>DisoveryView.xaml</DependentUpon>
+    <Compile Include="MVVM\View\DoseViewerView.xaml.cs">
+      <DependentUpon>DoseViewerView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="MVVM\View\HomeView.xaml.cs">
-      <DependentUpon>HomeView.xaml</DependentUpon>
+    <Compile Include="MVVM\View\CalculateConvertView.xaml.cs">
+      <DependentUpon>CalculateConvertView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\CalibrationView.xaml.cs">
+      <DependentUpon>CalibrationView.xaml</DependentUpon>
     </Compile>
     <Compile Include="MVVM\View\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>

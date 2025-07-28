@@ -16,9 +16,12 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         public RelayCommand ShutdownWindowCommand { get; set; }
         public RelayCommand MaximizeWindowCommand { get; set; }
         public RelayCommand MinimizeWindowCommand { get; set; }
-        public  RelayCommand  HomeViewCommand { get; set; }
-        public RelayCommand DiscoveryViewCommand { get; set; }
+
         public RelayCommand ViewCutRotateCommand { get; set; }
+        public RelayCommand ViewDoseViewerCommand { get; set; }
+        public RelayCommand ViewCalibrationCommand { get; set; }
+        public RelayCommand ViewCalculationCommand { get; set; }
+
 
 
         private object _currentView;
@@ -32,28 +35,35 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             }
         }
 
-        public HomeViewModel HomeVM { get; set; }
-        public DiscoveryViewModel DiscoveryVM { get; set; }
         public ViewCutRotateViewModel ViewCutRotateVM { get; set; }
+        public DoseViewerViewModel DoseViewerVM { get; set; }
+        public CalculateConvertViewModel CalculateConvertVM { get; set; }
+        public CalibrationViewModel CalibrationVM { get; set; }
 
         public MainViewModel()
         {
-            HomeVM = new HomeViewModel();
-            DiscoveryVM = new DiscoveryViewModel();
             ViewCutRotateVM = new ViewCutRotateViewModel();
-            CurrentView = HomeVM;
-            HomeViewCommand = new RelayCommand(o =>
-            {
-                CurrentView = HomeVM;
-            });
-            DiscoveryViewCommand = new RelayCommand(o =>
-            {
-                CurrentView = DiscoveryVM;
-            });
+            CurrentView = ViewCutRotateVM;
+
+            /* View Commands*/
             ViewCutRotateCommand = new RelayCommand(o =>
             {
                 CurrentView = ViewCutRotateVM;
             });
+            ViewDoseViewerCommand = new RelayCommand(o =>
+            {
+                CurrentView = DoseViewerVM;
+            });
+            ViewCalibrationCommand = new RelayCommand(o =>
+            {
+                CurrentView = CalibrationVM;
+            });
+            ViewCalculationCommand = new RelayCommand(o =>
+            {
+                CurrentView = CalculateConvertVM;
+            });
+
+            /* Control UI Elements*/
             MoveWindowCommand = new RelayCommand(o => (Application.Current.MainWindow as Window)?.DragMove());
             ShutdownWindowCommand = new RelayCommand(o => Application.Current.Shutdown());
             MaximizeWindowCommand = new RelayCommand(o =>             {

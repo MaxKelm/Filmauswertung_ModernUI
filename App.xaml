@@ -13,14 +13,17 @@
                 <ResourceDictionary Source="Theme/TextboxTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <DataTemplate DataType="{x:Type viewModel:HomeViewModel}">
-                <view:HomeView />
-            </DataTemplate>
-            <DataTemplate DataType="{x:Type viewModel:DiscoveryViewModel}">
-                <view:DisoveryView />
-            </DataTemplate>
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
                 <view:ViewCutRotateView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:CalculateConvertViewModel}">
+                <view:CalculateConvertView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:CalibrationViewModel}">
+                <view:CalibrationView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type viewModel:DoseViewerViewModel}">
+                <view:DoseViewerView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace Filmauswertung_ModernUI.MVVM.View
 {
     /// <summary>
-    /// Interaktionslogik für HomeView.xaml
+    /// Interaktionslogik für CalculateConvertView.xaml
     /// </summary>
-    public partial class HomeView : UserControl
+    public partial class CalculateConvertView : UserControl
     {
-        public HomeView()
+        public CalculateConvertView()
         {
             InitializeComponent();
         }

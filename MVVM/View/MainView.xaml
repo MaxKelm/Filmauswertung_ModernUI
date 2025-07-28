@@ -61,7 +61,7 @@
                     Tag="20,0,0,0" />
                 <RadioButton
                     Height="50"
-                    Command="{Binding DiscoveryViewCommand}"
+                    Command="{Binding ViewCalibrationCommand}"
                     Content="Calibration"
                     FontSize="14"
                     Foreground="White"
@@ -69,7 +69,7 @@
                     Tag="20,0,0,0" />
                 <RadioButton
                     Height="50"
-                    Command="{Binding HomeViewCommand}"
+                    Command="{Binding ViewCalculationCommand}"
                     Content="Calculate and Convert"
                     FontSize="14"
                     Foreground="White"
@@ -78,6 +78,7 @@
                     Tag="20,0,0,0" />
                 <RadioButton
                     Height="50"
+                    Command="{Binding ViewDoseViewerCommand}"
                     Content="3D Dose Viewer"
                     FontSize="14"
                     Foreground="White"
