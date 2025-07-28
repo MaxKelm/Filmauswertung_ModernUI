@@ -89,33 +89,6 @@
                 FontSize="20"
                 Foreground="White"
                 Text="Most Watched" />
-            <StackPanel Orientation="Horizontal">
-
-                <Border
-                    Width="150"
-                    Height="150"
-                    Margin="0"
-                    Background="#844eff"
-                    CornerRadius="10" />
-
-                <Border
-                    Width="150"
-                    Height="150"
-                    Background="#4e99ff"
-                    CornerRadius="10" />
-
-                <Border
-                    Width="150"
-                    Height="150"
-                    Background="#4eff91"
-                    CornerRadius="10" />
-
-                <Border
-                    Width="150"
-                    Height="150"
-                    Background="#ecff4e"
-                    CornerRadius="10" />
-            </StackPanel>
         </StackPanel>
     </StackPanel>
 </UserControl>

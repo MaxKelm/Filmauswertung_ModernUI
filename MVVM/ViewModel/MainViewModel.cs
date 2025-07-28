@@ -18,6 +18,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         public RelayCommand MinimizeWindowCommand { get; set; }
         public  RelayCommand  HomeViewCommand { get; set; }
         public RelayCommand DiscoveryViewCommand { get; set; }
+        public RelayCommand ViewCutRotateCommand { get; set; }
 
 
         private object _currentView;
@@ -48,6 +49,10 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             DiscoveryViewCommand = new RelayCommand(o =>
             {
                 CurrentView = DiscoveryVM;
+            });
+            ViewCutRotateCommand = new RelayCommand(o =>
+            {
+                CurrentView = ViewCutRotateVM;
             });
             MoveWindowCommand = new RelayCommand(o => (Application.Current.MainWindow as Window)?.DragMove());
             ShutdownWindowCommand = new RelayCommand(o => Application.Current.Shutdown());

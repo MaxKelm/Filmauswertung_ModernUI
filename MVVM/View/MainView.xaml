@@ -53,7 +53,7 @@
             <StackPanel>
                 <RadioButton
                     Height="50"
-                    Command="{Binding HomeViewCommand}"
+                    Command="{Binding ViewCutRotateCommand}"
                     Content="View | Cut | Rotate"
                     FontSize="14"
                     Foreground="White"
