@@ -1,15 +1,14 @@
 ﻿using System;
-using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using System.Diagnostics;
 using Filmauswertung_ModernUI.Core;
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
     internal class SingleCutViewModel : ObservableObject
     {
-        // DisplayedImage property for binding the image source
         private BitmapImage _displayedImage;
         public BitmapImage DisplayedImage
         {
@@ -24,22 +23,24 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
 
-        // Dummy commands
         public RelayCommand UploadTifCommand { get; set; }
-        public RelayCommand DefineRoiCommand { get; set; }
         public RelayCommand SaveRoiCommand { get; set; }
+        public RelayCommand DefineRoiCommand { get; set; }
 
         public SingleCutViewModel()
         {
-            // Initialize commands with dummy actions
             UploadTifCommand = new RelayCommand(_ => UploadTif());
-            DefineRoiCommand = new RelayCommand(_ => DefineRoi());
             SaveRoiCommand = new RelayCommand(_ => SaveRoi());
+            DefineRoiCommand = new RelayCommand(_ => StartRoiDrawing());
         }
 
         private readonly Core.Interfaces.IImageService _imageService = new Services.ImageService();
+
         private void UploadTif()
         {
+            IsDrawingRoi = false;
+            OnPropertyChanged(nameof(IsDrawingRoi));
+
             var tifImporter = new Services.SingleFileImporter(new[] { ".tif" });
             string selectedPath = Services.ImportDialogService.ShowDialog(tifImporter);
 
@@ -48,6 +49,9 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 try
                 {
                     DisplayedImage = _imageService.LoadImage(selectedPath);
+
+                    RoiRect = Rect.Empty;
+                    OnPropertyChanged(nameof(RoiRect));
                 }
                 catch (Exception ex)
                 {
@@ -56,17 +60,28 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
 
+        public bool IsDrawingRoi { get; private set; }
 
-        private void DefineRoi()
+        private void StartRoiDrawing()
         {
-            Debug.WriteLine("Define ROI command executed.");
-            // Implement ROI logic here
+            IsDrawingRoi = true;
+            OnPropertyChanged(nameof(IsDrawingRoi));
+        }
+
+        private Point _roiStartPoint;
+        public Rect RoiRect { get; private set; }
+
+        public void SetRoi(Point start, Point end)
+        {
+            RoiRect = new Rect(start, end);
+            OnPropertyChanged(nameof(RoiRect));
         }
 
         private void SaveRoi()
         {
-            Debug.WriteLine("Save ROI command executed.");
-            // Implement save logic here
+            IsDrawingRoi = false;
+            OnPropertyChanged(nameof(IsDrawingRoi));
+            Debug.WriteLine($"ROI saved: {RoiRect}");
         }
     }
 }
