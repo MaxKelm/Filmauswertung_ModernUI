@@ -2,6 +2,8 @@
     x:Class="Filmauswertung_ModernUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:VCTview="clr-namespace:Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews"
+    xmlns:VCTviewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels"
     xmlns:local="clr-namespace:Filmauswertung_ModernUI"
     xmlns:view="clr-namespace:Filmauswertung_ModernUI.MVVM.View"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
@@ -12,6 +14,7 @@
                 <ResourceDictionary Source="Theme/MenuButtonTheme.xaml" />
                 <ResourceDictionary Source="Theme/TextboxTheme.xaml" />
                 <ResourceDictionary Source="Theme/TitleButtonTheme.xaml" />
+                <ResourceDictionary Source="Theme/ToolbarButtons.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
@@ -25,6 +28,21 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type viewModel:DoseViewerViewModel}">
                 <view:DoseViewerView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:ViewViewModel}">
+                <VCTview:ViewView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:CutViewModel}">
+                <VCTview:CutView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:RotateViewModel}">
+                <VCTview:RotateView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:SingleCutViewModel}">
+                <VCTview:SingleCutView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:BatchCutViewModel}">
+                <VCTview:BatchCutView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

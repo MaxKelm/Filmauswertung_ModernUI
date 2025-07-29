@@ -34,6 +34,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -59,6 +62,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Core\Extensions.cs" />
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
     <Page Include="MVVM\View\DoseViewerView.xaml">
@@ -81,6 +85,26 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\BatchCutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\CutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\RotateView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\SingleCutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\ViewView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Theme\MenuButtonTheme.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -93,15 +117,22 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Theme\ToolbarButtons.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MVVM\ViewModel\DoseViewerViewModel.cs" />
     <Compile Include="MVVM\ViewModel\CalculateConvertViewModel.cs" />
     <Compile Include="MVVM\ViewModel\CalibrationViewModel.cs" />
-    <Compile Include="MVVM\ViewModel\DiscoveryViewModel.cs" />
-    <Compile Include="MVVM\ViewModel\HomeViewModel.cs" />
     <Compile Include="MVVM\ViewModel\MainViewModel.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\BatchCutViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\CutViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\RotateViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\SingleCutViewModel.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\ViewViewModel.cs" />
     <Compile Include="MVVM\View\DoseViewerView.xaml.cs">
       <DependentUpon>DoseViewerView.xaml</DependentUpon>
     </Compile>
@@ -116,6 +147,21 @@
     </Compile>
     <Compile Include="MVVM\View\ViewCutRotateView.xaml.cs">
       <DependentUpon>ViewCutRotateView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\BatchCutView.xaml.cs">
+      <DependentUpon>BatchCutView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\CutView.xaml.cs">
+      <DependentUpon>CutView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\RotateView.xaml.cs">
+      <DependentUpon>RotateView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\SingleCutView.xaml.cs">
+      <DependentUpon>SingleCutView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\ViewView.xaml.cs">
+      <DependentUpon>ViewView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -164,7 +210,9 @@
     <Folder Include="MVVM\Model\" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Images\icon.ico" />
     <Resource Include="Fonts\Poppins\OFL.txt" />
+    <Resource Include="icon.ico" />
     <Content Include="Images\AbstractGradient.jfif">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

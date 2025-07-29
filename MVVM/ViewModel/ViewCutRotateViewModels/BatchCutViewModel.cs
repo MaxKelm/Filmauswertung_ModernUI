@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Filmauswertung_ModernUI.MVVM.ViewModel
+namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
-    internal class DiscoveryViewModel
+    internal class BatchCutViewModel
     {
     }
 }

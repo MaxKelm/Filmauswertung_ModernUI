@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel
 {
@@ -43,7 +43,11 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         public MainViewModel()
         {
             ViewCutRotateVM = new ViewCutRotateViewModel();
-            CurrentView = ViewCutRotateVM;
+            DoseViewerVM = new DoseViewerViewModel();
+            CalibrationVM = new CalibrationViewModel();
+            CalculateConvertVM = new CalculateConvertViewModel();
+
+            CurrentView = CalculateConvertVM;
 
             /* View Commands*/
             ViewCutRotateCommand = new RelayCommand(o =>
@@ -64,7 +68,22 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             });
 
             /* Control UI Elements*/
-            MoveWindowCommand = new RelayCommand(o => (Application.Current.MainWindow as Window)?.DragMove());
+            MoveWindowCommand = new RelayCommand(o =>
+            {
+                var window = Application.Current.MainWindow;
+                if (window == null) return;
+
+                if (window.WindowState == WindowState.Maximized)
+                {
+                    window.WindowState = WindowState.Normal;
+                    window.DragMove();
+                }
+                else
+                {
+                    window.DragMove();
+                }
+            });
+
             ShutdownWindowCommand = new RelayCommand(o => Application.Current.Shutdown());
             MaximizeWindowCommand = new RelayCommand(o =>             {
                 if (Application.Current.MainWindow.WindowState == WindowState.Maximized)
