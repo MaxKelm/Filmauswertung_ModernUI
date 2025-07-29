@@ -3,21 +3,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core">
 
-    <Style x:Key="ToolbarButtons" TargetType="Button">
+    <Style x:Key="ToolbarButtons" TargetType="RadioButton">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="FontFamily" Value="/Fonts/#Poppins" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Button">
+                <ControlTemplate TargetType="RadioButton">
                     <Border
                         x:Name="border"
                         Background="{TemplateBinding Background}"
                         BorderBrush="Transparent"
                         BorderThickness="1"
                         CornerRadius="5">
-
                         <TextBlock
                             x:Name="textBlock"
                             HorizontalAlignment="Center"
@@ -35,11 +34,20 @@
                     </Border>
 
                     <ControlTemplate.Triggers>
+                        <!--  Hover  -->
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="border" Property="BorderBrush" Value="#AA7CFC00" />
                             <Setter TargetName="border" Property="Background" Value="#33303050" />
                         </Trigger>
+
+                        <!--  Pressed  -->
                         <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="border" Property="Background" Value="#2E2C40" />
+                            <Setter TargetName="textBlock" Property="Foreground" Value="#AA7CFC00" />
+                        </Trigger>
+
+                        <!--  Checked (important for RadioButtons)  -->
+                        <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="border" Property="Background" Value="#2E2C40" />
                             <Setter TargetName="textBlock" Property="Foreground" Value="#AA7CFC00" />
                         </Trigger>
@@ -48,5 +56,4 @@
             </Setter.Value>
         </Setter>
     </Style>
-
 </ResourceDictionary>

@@ -27,7 +27,7 @@
         </Grid.ColumnDefinitions>
 
         <!--  Top toolbar with two evenly spaced buttons  -->
-        <Button
+        <RadioButton
             Grid.Row="0"
             Grid.Column="0"
             Margin="2"
@@ -37,7 +37,7 @@
             Content="Single Cut"
             Style="{StaticResource ToolbarButtons}" />
 
-        <Button
+        <RadioButton
             Grid.Row="0"
             Grid.Column="1"
             Margin="2"
@@ -45,6 +45,7 @@
             extensions:Extensions.Icon="📑"
             Command="{Binding SelectBatchCutCommand}"
             Content="Batch Cut"
+            IsChecked="True"
             Style="{StaticResource ToolbarButtons}" />
 
         <!--  ContentPresenter for subviews  -->

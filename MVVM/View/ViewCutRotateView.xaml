@@ -18,9 +18,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40" />
-            <!--  Top buttons  -->
             <RowDefinition Height="*" />
-            <!--  Content area  -->
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -30,7 +28,7 @@
         </Grid.ColumnDefinitions>
 
         <!--  Top Region: Buttons (directly in the grid)  -->
-        <Button
+        <RadioButton
             Grid.Row="0"
             Grid.Column="0"
             Margin="2"
@@ -40,7 +38,7 @@
             Content="View"
             Style="{StaticResource ToolbarButtons}" />
 
-        <Button
+        <RadioButton
             Grid.Row="0"
             Grid.Column="1"
             Margin="2"
@@ -48,19 +46,19 @@
             extensions:Extensions.Icon="✂️"
             Command="{Binding SelectCutCommand}"
             Content="Cut"
+            IsChecked="True"
             Style="{StaticResource ToolbarButtons}" />
 
-        <Button
+        <RadioButton
             Grid.Row="0"
             Grid.Column="2"
-            Margin="2"
+            Margin="2,2,5,2"
             Padding="10,5"
             extensions:Extensions.Icon="🔄"
             Command="{Binding SelectRotateCommand}"
             Content="Rotate"
             Style="{StaticResource ToolbarButtons}" />
 
-        <!--  ContentPresenter for selected view  -->
         <ContentPresenter
             Grid.Row="1"
             Grid.ColumnSpan="3"

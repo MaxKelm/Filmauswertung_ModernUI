@@ -15,6 +15,7 @@
                 <ResourceDictionary Source="Theme/TextboxTheme.xaml" />
                 <ResourceDictionary Source="Theme/TitleButtonTheme.xaml" />
                 <ResourceDictionary Source="Theme/ToolbarButtons.xaml" />
+                <ResourceDictionary Source="Theme/GenericButton.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
