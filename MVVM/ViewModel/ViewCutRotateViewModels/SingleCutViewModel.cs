@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Filmauswertung_ModernUI.Core;
+using Filmauswertung_ModernUI.Services;
+using System;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using Filmauswertung_ModernUI.Core;
+using System.IO;
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
@@ -22,6 +24,8 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 }
             }
         }
+        private string _loadedImageBaseName;
+        private int _roiSaveCount = 0;
 
         public RelayCommand UploadTifCommand { get; set; }
         public RelayCommand SaveRoiCommand { get; set; }
@@ -41,14 +45,15 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             IsDrawingRoi = false;
             OnPropertyChanged(nameof(IsDrawingRoi));
 
-            var tifImporter = new Services.SingleFileImporter(new[] { ".tif" });
-            string selectedPath = Services.ImportDialogService.ShowDialog(tifImporter);
+            var tifImporter = new SingleFileImporter(new[] { ".tif" });
+            string selectedPath = ImportDialogService.ShowDialog(tifImporter);
 
             if (!string.IsNullOrEmpty(selectedPath))
             {
                 try
                 {
                     DisplayedImage = _imageService.LoadImage(selectedPath);
+                    _loadedImageBaseName = Path.GetFileNameWithoutExtension(selectedPath);
 
                     RoiRect = Rect.Empty;
                     OnPropertyChanged(nameof(RoiRect));
@@ -68,7 +73,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             OnPropertyChanged(nameof(IsDrawingRoi));
         }
 
-        private Point _roiStartPoint;
         public Rect RoiRect { get; private set; }
 
         public void SetRoi(Point start, Point end)
@@ -79,9 +83,28 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
         private void SaveRoi()
         {
-            IsDrawingRoi = false;
-            OnPropertyChanged(nameof(IsDrawingRoi));
             Debug.WriteLine($"ROI saved: {RoiRect}");
+
+            if (DisplayedImage == null || RoiRect.IsEmpty)
+                return;
+            string baseName = string.IsNullOrEmpty(_loadedImageBaseName) ? "ROI" : _loadedImageBaseName;
+            string suffix = $"ROI_{_roiSaveCount}";
+            var exporter = new SingleFileExporter(".tif", suffix);
+            string exportPath = exporter.GetExportPath(baseName);
+
+            if (!string.IsNullOrEmpty(exportPath))
+            {
+                try
+                {
+                    _imageService.SaveRoi(DisplayedImage, RoiRect, exportPath);
+                    _roiSaveCount++;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Failed to save ROI: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
         }
+
     }
 }

@@ -67,6 +67,7 @@
     <Compile Include="Core\Interfaces\IImageService.cs" />
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
+    <Compile Include="Services\Exporter.cs" />
     <Compile Include="Services\ImageService.cs" />
     <Compile Include="Services\Importer.cs" />
     <Page Include="MVVM\View\DoseViewerView.xaml">
