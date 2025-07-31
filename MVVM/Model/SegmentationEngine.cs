@@ -76,5 +76,23 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 SuggestedFileName = $"ROI_{cropX}_{cropY}_{cropWidth}x{cropHeight}.tif"
             };
         }
+        public Rect InflateAndClampRect(Rect rect, double marginFactor, int imageWidth, int imageHeight)
+        {
+            double marginWidth = rect.Width * marginFactor;
+            double marginHeight = rect.Height * marginFactor;
+
+            double x = rect.X - marginWidth / 2;
+            double y = rect.Y - marginHeight / 2;
+            double width = rect.Width + marginWidth;
+            double height = rect.Height + marginHeight;
+
+            // Clamp to image bounds
+            x = Math.Max(0, x);
+            y = Math.Max(0, y);
+            width = Math.Min(width, imageWidth - x);
+            height = Math.Min(height, imageHeight - y);
+
+            return new Rect(x, y, width, height);
+        }
     }
 }

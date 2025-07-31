@@ -19,5 +19,14 @@ namespace Filmauswertung_ModernUI.Core
         {
             return (string)element.GetValue(Icon);
         }
+
+        public static readonly DependencyProperty DisplayValueProperty = DependencyProperty.RegisterAttached(
+            "DisplayValue",
+            typeof(string),
+            typeof(Extensions),
+            new PropertyMetadata(default(string)));
+
+        public static void SetDisplayValue(UIElement element, string value) => element.SetValue(DisplayValueProperty, value);
+        public static string GetDisplayValue(UIElement element) => (string)element.GetValue(DisplayValueProperty);
     }
 }

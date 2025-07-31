@@ -10,19 +10,30 @@
     d:DesignWidth="900"
     Background="Transparent"
     mc:Ignorable="d">
-
     <Grid>
+        <!--  🧱 Define two columns  -->
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
+            <!--  Left: Image + Sliders  -->
             <ColumnDefinition Width="Auto" />
+            <!--  Right: Buttons  -->
         </Grid.ColumnDefinitions>
 
-        <!--  Placeholder for image/plot area  -->
+        <!--  🎞️ Left side: Image and Sliders  -->
         <Grid Grid.Column="0" ClipToBounds="True">
-            <!--  You can populate this as needed  -->
-            <Viewbox Stretch="Uniform" StretchDirection="Both">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <!--  Image area  -->
+                <RowDefinition Height="Auto" />
+                <!--  Sliders  -->
+            </Grid.RowDefinitions>
+
+            <!--  🖼️ Image and Overlay  -->
+            <Viewbox
+                Grid.Row="0"
+                Stretch="Uniform"
+                StretchDirection="Both">
                 <Grid>
-                    <!--  Optionally bind to a batch preview image or canvas  -->
                     <Image
                         x:Name="TifImage"
                         HorizontalAlignment="Left"
@@ -30,17 +41,70 @@
                         MouseLeftButtonDown="TifImage_MouseLeftButtonDown"
                         Source="{Binding DisplayedImage}"
                         Stretch="None" />
-
-                    <!--  Optional overlay canvas  -->
                     <Canvas
                         x:Name="ClickCanvas"
                         Background="Transparent"
                         IsHitTestVisible="False" />
                 </Grid>
             </Viewbox>
+
+            <!--  🎚️ Sliders at bottom  -->
+            <Grid Grid.Row="1" Margin="20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!--  Slider A  -->
+                <StackPanel
+                    Grid.Column="0"
+                    HorizontalAlignment="Center"
+                    Orientation="Vertical">
+                    <TextBlock
+                        Margin="0,0,0,1"
+                        HorizontalAlignment="Center"
+                        FontFamily="Fonts/#Poppins"
+                        Foreground="LightGray"
+                        Text="Contrast" />
+                    <Slider
+                        Width="200"
+                        extensions:Extensions.DisplayValue="{Binding SliderADisplayLabel}"
+                        IsSnapToTickEnabled="True"
+                        Maximum="4"
+                        Minimum="0"
+                        Style="{StaticResource DynamicSlider}"
+                        TickFrequency="1"
+                        TickPlacement="BottomRight"
+                        Value="{Binding SliderAValue, Mode=TwoWay}" />
+                </StackPanel>
+
+                <!--  Slider B  -->
+                <StackPanel
+                    Grid.Column="1"
+                    HorizontalAlignment="Center"
+                    Orientation="Vertical">
+                    <TextBlock
+                        Margin="0,0,0,1"
+                        HorizontalAlignment="Center"
+                        FontFamily="Fonts/#Poppins"
+                        Foreground="LightGray"
+                        Text="Margin" />
+                    <Slider
+                        Width="200"
+                        extensions:Extensions.DisplayValue="{Binding SliderBDisplayLabel}"
+                        IsSnapToTickEnabled="True"
+                        Maximum="3"
+                        Minimum="0"
+                        Style="{StaticResource DynamicSlider}"
+                        TickFrequency="1"
+                        TickPlacement="BottomRight"
+                        Value="{Binding SliderBValue, Mode=TwoWay}" />
+                </StackPanel>
+
+            </Grid>
         </Grid>
 
-        <!--  Buttons  -->
+        <!--  🎛️ Buttons on the right  -->
         <StackPanel
             Grid.Column="1"
             Width="120"
@@ -82,9 +146,6 @@
                 Command="{Binding SaveSegmentsCommand}"
                 Content="Save"
                 Style="{StaticResource DynamicButton}" />
-
-
         </StackPanel>
-
     </Grid>
 </UserControl>

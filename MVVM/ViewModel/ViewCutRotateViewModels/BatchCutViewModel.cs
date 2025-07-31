@@ -3,6 +3,7 @@ using Filmauswertung_ModernUI.MVVM.Model;
 using Filmauswertung_ModernUI.MVVM.View;
 using Filmauswertung_ModernUI.Services;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -16,6 +17,67 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
     internal class BatchCutViewModel : ObservableObject
     {
+        private static readonly Dictionary<int, string> SliderALabels = new Dictionary<int, string>()
+        {
+            { 0, "Original" },
+            { 1, "Low increase" },
+            { 2, "Medium increase" },
+            { 3, "Strong increase" },
+            { 4, "Absurde increase" }
+        };
+
+        private int _sliderAValue;
+        public int SliderAValue
+        {
+            get => _sliderAValue;
+            set
+            {
+                if (_sliderAValue != value)
+                {
+                    _sliderAValue = value;
+                    OnPropertyChanged(nameof(SliderAValue));
+                    OnPropertyChanged(nameof(SliderADisplayLabel)); // Triggers UI update
+                }
+            }
+        }
+
+        private static readonly Dictionary<int, string> SliderBLabels = new Dictionary<int, string>()
+        {
+            { 0, "No Margin" },
+            { 1, "Tight Margin" },
+            { 2, "Moderate Margin" },
+            { 3, "Wide Margin" },
+        };
+
+        private static readonly Dictionary<int, double> MarginFactors = new Dictionary<int, double>()
+        {
+            { 0, 0.0 },  // No Margin
+            { 1, 0.10 }, // Tight Margin (10%)
+            { 2, 0.30 }, // Moderate Margin (30%)
+            { 3, 0.70 }   // Wide Margin (70%)
+        };
+
+        private int _sliderBValue;
+        public int SliderBValue
+        {
+            get => _sliderBValue;
+            set
+            {
+                if (_sliderBValue != value)
+                {
+                    _sliderBValue = value;
+                    OnPropertyChanged(nameof(SliderBValue));
+                    OnPropertyChanged(nameof(SliderBDisplayLabel)); // Triggers UI update
+                }
+            }
+        }
+
+        public string SliderADisplayLabel =>
+            SliderALabels.TryGetValue(SliderAValue, out var label) ? label : "Unknown";
+
+        public string SliderBDisplayLabel =>
+            SliderBLabels.TryGetValue(SliderBValue, out var label) ? label : "Unknown";
+
         public ObservableCollection<Point> MarkerPoints { get; } = new ObservableCollection<Point>();
         private readonly SegmentationEngine _segmentationEngine = new SegmentationEngine();
         public ObservableCollection<Rect> SegmentBoxes { get; } = new ObservableCollection<Rect>();
@@ -102,8 +164,15 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             if (result != null && !result.BoundingBox.IsEmpty)
             {
-                SegmentBoxes.Add(result.BoundingBox);
+                var originalBox = result.BoundingBox;
+
+                MarginFactors.TryGetValue(SliderBValue, out double marginFactor);
+
+                var inflatedBox = _segmentationEngine.InflateAndClampRect(originalBox, marginFactor, DisplayedImage.PixelWidth, DisplayedImage.PixelHeight);
+
+                SegmentBoxes.Add(inflatedBox);
             }
+
         }
 
         public void RemoveLastMarker()

@@ -1,0 +1,115 @@
+﻿<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core">
+
+    <Style x:Key="DynamicSlider" TargetType="Slider">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="FontFamily" Value="/Fonts/#Poppins" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <StackPanel Margin="5" VerticalAlignment="Center">
+                        <Grid>
+                            <Track
+                                x:Name="PART_Track"
+                                Focusable="False"
+                                IsDirectionReversed="{TemplateBinding IsDirectionReversed}"
+                                SnapsToDevicePixels="True">
+                                <Track.Thumb>
+                                    <Thumb
+                                        x:Name="PART_Thumb"
+                                        Width="16"
+                                        Height="16"
+                                        Background="White"
+                                        BorderBrush="#7CFC00"
+                                        BorderThickness="2">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Border
+                                                    Width="{TemplateBinding Width}"
+                                                    Height="{TemplateBinding Height}"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="8" />
+                                                <!--  half of 16 to make a circle  -->
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton
+                                        Height="6"
+                                        Margin="0"
+                                        VerticalAlignment="Center"
+                                        Background="#2E2C40"
+                                        Command="Slider.DecreaseLarge"
+                                        IsTabStop="False"
+                                        Style="{x:Null}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border
+                                                    Height="6"
+                                                    HorizontalAlignment="Stretch"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="3,0,0,3" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton
+                                        Height="6"
+                                        Margin="0"
+                                        VerticalAlignment="Center"
+                                        Background="#2E2C40"
+                                        Command="Slider.IncreaseLarge"
+                                        IsTabStop="False"
+                                        Style="{x:Null}">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border
+                                                    Height="6"
+                                                    HorizontalAlignment="Stretch"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="0,3,3,0" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+
+                            </Track>
+                        </Grid>
+
+                        <!--  Reserve space for text to prevent layout shift  -->
+                        <TextBlock
+                            x:Name="HoverText"
+                            Height="20"
+                            Margin="0,4,0,0"
+                            HorizontalAlignment="Center"
+                            FontFamily="/Fonts/#Poppins"
+                            Foreground="LightGray"
+                            Opacity="0"
+                            Text="{Binding (extensions:Extensions.DisplayValue), RelativeSource={RelativeSource TemplatedParent}, FallbackValue={TemplateBinding Value}}" />
+                    </StackPanel>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PART_Thumb" Property="Background" Value="#DDDDDD" />
+                            <Setter TargetName="PART_Thumb" Property="BorderBrush" Value="#AA7CFC00" />
+                            <Setter TargetName="HoverText" Property="Opacity" Value="1" />
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="PART_Thumb" Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
