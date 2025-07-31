@@ -61,7 +61,7 @@ namespace Filmauswertung_ModernUI.MVVM.View
                 nameof(ToastDuration),
                 typeof(TimeSpan),
                 typeof(ToastWindow),
-                new PropertyMetadata(TimeSpan.FromSeconds(1), OnToastDurationChanged));
+                new PropertyMetadata(TimeSpan.FromSeconds(1.5), OnToastDurationChanged));
 
         private static void OnToastDurationChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {

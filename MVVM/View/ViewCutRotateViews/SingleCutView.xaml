@@ -61,11 +61,22 @@
 
             <Button
                 Height="60"
+                Margin="0,0,0,10"
                 extensions:Extensions.Icon="💾"
                 Background="#3C3A50"
                 Command="{Binding SaveRoiCommand}"
                 Content="Save"
                 Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="📋"
+                Background="#3C3A50"
+                Command="{Binding CopyPathToClipboardCommand}"
+                Content="Copy Path"
+                Style="{StaticResource DynamicButton}" />
+
         </StackPanel>
     </Grid>
 
