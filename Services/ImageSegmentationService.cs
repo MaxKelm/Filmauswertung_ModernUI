@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Diagnostics;  // Make sure this is included at the top of your file
 
 namespace Filmauswertung_ModernUI.Services
 {
@@ -43,10 +44,13 @@ namespace Filmauswertung_ModernUI.Services
         }
 
         public bool[,] RegionGrow(byte[] pixels, int width, int height, int stride,
-                                  int centerX, int centerY, byte median, byte tolerance = 15)
+                          int centerX, int centerY, byte median, byte tolerance = 15)
         {
             if (centerX < 0 || centerX >= width || centerY < 0 || centerY >= height)
+            {
+                Debug.WriteLine($"Seed point ({centerX},{centerY}) is out of image bounds.");
                 return new bool[width, height]; // early exit for invalid seed point
+            }
 
             bool[,] visited = new bool[width, height];
             bool[,] mask = new bool[width, height];
@@ -66,9 +70,11 @@ namespace Filmauswertung_ModernUI.Services
 
                 int idx = y * stride + x * 4;
 
-                // Ensure we don't access beyond the bounds
                 if (idx + 2 >= pixels.Length)
+                {
+                    Debug.WriteLine($"Pixel index {idx} out of bounds for pixels array length {pixels.Length} at ({x},{y}). Skipping.");
                     continue;
+                }
 
                 byte b = pixels[idx];
                 byte g = pixels[idx + 1];
@@ -84,7 +90,13 @@ namespace Filmauswertung_ModernUI.Services
                         int nx = x + (int)offset.X;
                         int ny = y + (int)offset.Y;
 
-                        if (nx >= 0 && nx < width && ny >= 0 && ny < height && !visited[nx, ny])
+                        if (nx < 0 || nx >= width || ny < 0 || ny >= height)
+                        {
+                            Debug.WriteLine($"Neighbor pixel ({nx},{ny}) is out of bounds, skipping.");
+                            continue;
+                        }
+
+                        if (!visited[nx, ny])
                         {
                             visited[nx, ny] = true;
                             queue.Enqueue(new Point(nx, ny));

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Windows;
+using System.Windows.Forms.VisualStyles;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -22,7 +23,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
     {
         private readonly ImageSegmentationService _service = new ImageSegmentationService();
 
-        public SegmentResult SegmentRegion(BitmapSource imageSource, Point marker)
+        public SegmentResult SegmentRegion(BitmapSource imageSource, Point marker, byte tolerance)
         {
             if (imageSource == null) return null;
 
@@ -45,7 +46,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 return null;
 
             byte median = _service.CalculateMedian(region);
-            var mask = _service.RegionGrow(pixels, width, height, stride, centerX, centerY, median);
+            var mask = _service.RegionGrow(pixels, width, height, stride, centerX, centerY, median, tolerance);
             var box = _service.GetBoundingBox(mask, width, height);
 
             if (box.IsEmpty)

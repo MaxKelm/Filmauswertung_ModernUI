@@ -160,7 +160,9 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             MarkerPoints.Add(uiPoint);
 
-            var result = _segmentationEngine.SegmentRegion(DisplayedImage, uiPoint);
+            byte tolerance = 50;
+
+            var result = _segmentationEngine.SegmentRegion(DisplayedImage, uiPoint, tolerance);
 
             if (result != null && !result.BoundingBox.IsEmpty)
             {
