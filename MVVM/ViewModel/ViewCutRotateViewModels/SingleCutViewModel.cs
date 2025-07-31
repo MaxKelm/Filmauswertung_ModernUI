@@ -25,7 +25,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
         private string _loadedImageBaseName;
-        private int _roiSaveCount = 0;
+        private int _roiSaveCount = 1;
 
         public RelayCommand UploadTifCommand { get; set; }
         public RelayCommand SaveRoiCommand { get; set; }

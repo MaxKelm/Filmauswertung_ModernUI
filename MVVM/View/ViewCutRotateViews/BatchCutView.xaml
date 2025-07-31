@@ -3,17 +3,104 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:local="clr-namespace:Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="600"
+    d:DesignWidth="900"
+    Background="Transparent"
     mc:Ignorable="d">
+
     <Grid>
-        <TextBlock
-            Margin="0,0,0,20"
-            HorizontalAlignment="Left"
-            FontSize="28"
-            Foreground="White"
-            Text="BATCH CUT VIEW" />
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!--  Placeholder for image/plot area  -->
+        <Grid Grid.Column="0" ClipToBounds="True">
+            <!--  You can populate this as needed  -->
+            <Viewbox Stretch="Uniform" StretchDirection="Both">
+                <Grid>
+                    <!--  Optionally bind to a batch preview image or canvas  -->
+                    <Image
+                        x:Name="TifImage"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        MouseLeftButtonDown="TifImage_MouseLeftButtonDown"
+                        Source="{Binding DisplayedImage}"
+                        Stretch="None" />
+
+                    <!--  Optional overlay canvas  -->
+                    <Canvas
+                        x:Name="ClickCanvas"
+                        Background="Transparent"
+                        IsHitTestVisible="False" />
+                </Grid>
+            </Viewbox>
+        </Grid>
+
+        <!--  Buttons  -->
+        <StackPanel
+            Grid.Column="1"
+            Width="120"
+            Margin="10"
+            VerticalAlignment="Top"
+            Orientation="Vertical">
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="📤"
+                Background="#3C3A50"
+                Command="{Binding UploadTifCommand}"
+                Content="Upload .tif"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="📍"
+                Background="#3C3A50"
+                Command="{Binding SetMarkerCommand}"
+                Content="Set Marker"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="▶️"
+                Background="#3C3A50"
+                Command="{Binding StartProcessCommand}"
+                Content="Start Processing"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                extensions:Extensions.Icon="💾"
+                Background="#3C3A50"
+                Command="{Binding SaveRoiCommand}"
+                Content="Save"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,10,0,10"
+                extensions:Extensions.Icon="↩️"
+                Background="#3C3A50"
+                Command="{Binding RemoveLastMarkerCommand}"
+                Content="Remove Last Click"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                extensions:Extensions.Icon="❌"
+                Background="#3C3A50"
+                Command="{Binding ClearMarkersCommand}"
+                Content="Remove All Clicks"
+                Style="{StaticResource DynamicButton}" />
+
+        </StackPanel>
+
     </Grid>
 </UserControl>
