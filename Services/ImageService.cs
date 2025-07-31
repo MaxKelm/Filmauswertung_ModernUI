@@ -1,12 +1,10 @@
 ﻿using Filmauswertung_ModernUI.Core.Interfaces;
+using Filmauswertung_ModernUI.MVVM.Model;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Media.Imaging;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace Filmauswertung_ModernUI.Services
 {
@@ -43,6 +41,34 @@ namespace Filmauswertung_ModernUI.Services
             var croppedBitmap = new CroppedBitmap(image, cropRect);
             var encoder = new TiffBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(croppedBitmap));
+
+            using (var fileStream = new FileStream(savePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+
+        // New method to save cropped pixels from segmentation
+        public void SaveSegmentCroppedImage(SegmentResult segment, string savePath)
+        {
+            if (segment == null || segment.CroppedPixelData == null)
+                throw new ArgumentNullException(nameof(segment), "Segment or cropped pixels are null.");
+
+            int width = segment.CropWidth;
+            int height = segment.CropHeight;
+            int stride = width * 4; // Bgra32
+
+            var bitmap = BitmapSource.Create(
+                width,
+                height,
+                96, 96, // dpiX, dpiY
+                PixelFormats.Bgra32,
+                null,
+                segment.CroppedPixelData,
+                stride);
+
+            var encoder = new TiffBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
 
             using (var fileStream = new FileStream(savePath, FileMode.Create))
             {

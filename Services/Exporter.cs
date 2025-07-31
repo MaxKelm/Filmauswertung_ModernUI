@@ -1,7 +1,6 @@
-﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using System.Windows.Forms;
 
 namespace Filmauswertung_ModernUI.Services
@@ -21,7 +20,9 @@ namespace Filmauswertung_ModernUI.Services
 
         protected Exporter(string defaultExtension, string suggestedSuffix = "")
         {
-            DefaultExtension = defaultExtension.StartsWith(".") ? defaultExtension : "." + defaultExtension;
+            DefaultExtension = string.IsNullOrEmpty(defaultExtension)
+                ? string.Empty
+                : (defaultExtension.StartsWith(".") ? defaultExtension : "." + defaultExtension);
             SuggestedSuffix = suggestedSuffix;
         }
 
@@ -42,7 +43,7 @@ namespace Filmauswertung_ModernUI.Services
         {
             string suggestedFileName = $"{inputBaseName}_{SuggestedSuffix}{DefaultExtension}";
 
-            var sfd = new System.Windows.Forms.SaveFileDialog
+            var sfd = new SaveFileDialog
             {
                 Filter = $"{DefaultExtension.ToUpper().Trim('.')} files (*{DefaultExtension})|*{DefaultExtension}|All files (*.*)|*.*",
                 FileName = suggestedFileName,
@@ -64,15 +65,17 @@ namespace Filmauswertung_ModernUI.Services
 
         public override string GetExportPath(string inputBaseName)
         {
-            using (var fbd = new FolderBrowserDialog())
+            var dlg = new CommonOpenFileDialog
             {
-                fbd.Description = "Select Export Folder";
-                if (fbd.ShowDialog() == DialogResult.OK)
-                {
-                    string targetFolder = Path.Combine(fbd.SelectedPath, $"{inputBaseName}_{SuggestedSuffix}");
-                    Directory.CreateDirectory(targetFolder);
-                    return targetFolder;
-                }
+                IsFolderPicker = true,
+                Title = "Select Export Folder"
+            };
+
+            if (dlg.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                string targetFolder = Path.Combine(dlg.FileName, $"{inputBaseName}_{SuggestedSuffix}");
+                Directory.CreateDirectory(targetFolder);
+                return targetFolder;
             }
 
             return null;

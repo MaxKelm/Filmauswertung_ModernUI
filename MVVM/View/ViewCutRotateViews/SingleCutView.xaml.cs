@@ -29,7 +29,7 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
 
         private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is SingleCutViewModel vm && vm.IsDrawingRoi)
+            if (DataContext is SingleCutViewModel vm)
             {
                 _startPoint = e.GetPosition(MainImage);
                 Canvas.SetLeft(_roiRect, _startPoint.X);

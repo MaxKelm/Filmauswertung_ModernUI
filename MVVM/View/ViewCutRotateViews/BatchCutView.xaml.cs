@@ -27,7 +27,7 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
 
         private void TifImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (DataContext is BatchCutViewModel vm && vm.IsMarkerModeEnabled)
+            if (DataContext is BatchCutViewModel vm)
             {
                 Point clickPoint = e.GetPosition(TifImage);
 
@@ -73,13 +73,20 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
             ClickCanvas.Children.Clear();
 
             if (DataContext is BatchCutViewModel vm)
+            { 
                 vm.MarkerPoints.Clear();
+                vm.SegmentBoxes.Clear();
+            }
+
+
         }
         private void BatchCutView_Loaded(object sender, RoutedEventArgs e)
         {
             if (DataContext is BatchCutViewModel vm)
             {
                 vm.MarkerPoints.CollectionChanged += MarkerPoints_CollectionChanged;
+                vm.SegmentBoxes.CollectionChanged += SegmentBoxes_CollectionChanged;
+
             }
         }
         private void MarkerPoints_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -97,6 +104,47 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
                 clickedPoints.Add(point);
                 DrawMarker(point);
             }
+        }
+        private void SegmentBoxes_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (DataContext is BatchCutViewModel vm)
+            {
+                // Remove previous boxes (but not markers)
+                var toRemove = new List<UIElement>();
+                foreach (UIElement child in ClickCanvas.Children)
+                {
+                    if (child is Rectangle rect && rect.Tag?.ToString() == "SegBox")
+                        toRemove.Add(child);
+                }
+                foreach (var el in toRemove)
+                    ClickCanvas.Children.Remove(el);
+
+                // Draw all current bounding boxes
+                foreach (Rect box in vm.SegmentBoxes)
+                {
+                    DrawBoundingBox(box);
+                }
+            }
+        }
+
+        private void DrawBoundingBox(Rect box)
+        {
+            var rectangle = new Rectangle
+            {
+                Width = box.Width,
+                Height = box.Height,
+                Stroke = Brushes.Green,
+                StrokeThickness = 4, // thicker border
+                StrokeDashArray = new DoubleCollection { 4, 2 },
+                Fill = new SolidColorBrush(Color.FromArgb(60, 0, 128, 0)), // semi-transparent green fill (alpha=60)
+                Tag = "SegBox", // So we can identify and clear them later
+                IsHitTestVisible = false
+            };
+
+            Canvas.SetLeft(rectangle, box.X);
+            Canvas.SetTop(rectangle, box.Y);
+
+            ClickCanvas.Children.Add(rectangle);
         }
 
     }

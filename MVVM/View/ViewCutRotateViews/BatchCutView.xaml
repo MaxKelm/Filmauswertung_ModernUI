@@ -60,32 +60,6 @@
             <Button
                 Height="60"
                 Margin="0,0,0,10"
-                extensions:Extensions.Icon="📍"
-                Background="#3C3A50"
-                Command="{Binding SetMarkerCommand}"
-                Content="Set Marker"
-                Style="{StaticResource DynamicButton}" />
-
-            <Button
-                Height="60"
-                Margin="0,0,0,10"
-                extensions:Extensions.Icon="▶️"
-                Background="#3C3A50"
-                Command="{Binding StartProcessCommand}"
-                Content="Start Processing"
-                Style="{StaticResource DynamicButton}" />
-
-            <Button
-                Height="60"
-                extensions:Extensions.Icon="💾"
-                Background="#3C3A50"
-                Command="{Binding SaveRoiCommand}"
-                Content="Save"
-                Style="{StaticResource DynamicButton}" />
-
-            <Button
-                Height="60"
-                Margin="0,10,0,10"
                 extensions:Extensions.Icon="↩️"
                 Background="#3C3A50"
                 Command="{Binding RemoveLastMarkerCommand}"
@@ -94,11 +68,21 @@
 
             <Button
                 Height="60"
+                Margin="0,0,0,10"
                 extensions:Extensions.Icon="❌"
                 Background="#3C3A50"
                 Command="{Binding ClearMarkersCommand}"
                 Content="Remove All Clicks"
                 Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                extensions:Extensions.Icon="💾"
+                Background="#3C3A50"
+                Command="{Binding SaveSegmentsCommand}"
+                Content="Save"
+                Style="{StaticResource DynamicButton}" />
+
 
         </StackPanel>
 

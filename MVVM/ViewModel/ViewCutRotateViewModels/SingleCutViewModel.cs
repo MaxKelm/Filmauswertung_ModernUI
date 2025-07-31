@@ -35,16 +35,12 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         {
             UploadTifCommand = new RelayCommand(_ => UploadTif());
             SaveRoiCommand = new RelayCommand(_ => SaveRoi());
-            DefineRoiCommand = new RelayCommand(_ => StartRoiDrawing());
         }
 
-        private readonly Core.Interfaces.IImageService _imageService = new Services.ImageService();
+        private readonly Core.Interfaces.IImageService _imageService = new ImageService();
 
         private void UploadTif()
         {
-            IsDrawingRoi = false;
-            OnPropertyChanged(nameof(IsDrawingRoi));
-
             var tifImporter = new SingleFileImporter(new[] { ".tif" });
             string selectedPath = ImportDialogService.ShowDialog(tifImporter);
 
@@ -63,14 +59,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                     Debug.WriteLine($"Image load error: {ex.Message}");
                 }
             }
-        }
-
-        public bool IsDrawingRoi { get; private set; }
-
-        private void StartRoiDrawing()
-        {
-            IsDrawingRoi = true;
-            OnPropertyChanged(nameof(IsDrawingRoi));
         }
 
         public Rect RoiRect { get; private set; }
