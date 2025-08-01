@@ -17,6 +17,7 @@
                 <ResourceDictionary Source="Theme/ToolbarButtons.xaml" />
                 <ResourceDictionary Source="Theme/GenericButton.xaml" />
                 <ResourceDictionary Source="Theme/DynamicSlider.xaml" />
+                <ResourceDictionary Source="Theme/ToggleSwitchTheme.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
@@ -31,20 +32,11 @@
             <DataTemplate DataType="{x:Type viewModel:DoseViewerViewModel}">
                 <view:DoseViewerView />
             </DataTemplate>
-            <DataTemplate DataType="{x:Type VCTviewModel:ViewViewModel}">
-                <VCTview:ViewView />
-            </DataTemplate>
             <DataTemplate DataType="{x:Type VCTviewModel:CutViewModel}">
                 <VCTview:CutView />
             </DataTemplate>
             <DataTemplate DataType="{x:Type VCTviewModel:RotateViewModel}">
                 <VCTview:RotateView />
-            </DataTemplate>
-            <DataTemplate DataType="{x:Type VCTviewModel:SingleCutViewModel}">
-                <VCTview:SingleCutView />
-            </DataTemplate>
-            <DataTemplate DataType="{x:Type VCTviewModel:BatchCutViewModel}">
-                <VCTview:BatchCutView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

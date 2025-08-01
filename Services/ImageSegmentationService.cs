@@ -72,7 +72,6 @@ namespace Filmauswertung_ModernUI.Services
 
                 if (idx + 2 >= pixels.Length)
                 {
-                    Debug.WriteLine($"Pixel index {idx} out of bounds for pixels array length {pixels.Length} at ({x},{y}). Skipping.");
                     continue;
                 }
 
@@ -92,7 +91,6 @@ namespace Filmauswertung_ModernUI.Services
 
                         if (nx < 0 || nx >= width || ny < 0 || ny >= height)
                         {
-                            Debug.WriteLine($"Neighbor pixel ({nx},{ny}) is out of bounds, skipping.");
                             continue;
                         }
 

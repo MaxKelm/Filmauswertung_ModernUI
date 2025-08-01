@@ -5,9 +5,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toggle="clr-namespace:Filmauswertung_ModernUI.Services"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels"
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="600"
+    d:DesignWidth="1000"
     Background="Transparent"
     mc:Ignorable="d">
 
@@ -16,43 +17,134 @@
     </UserControl.DataContext>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="40" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <!--  Top toolbar with two evenly spaced buttons  -->
-        <RadioButton
-            Grid.Row="0"
-            Grid.Column="0"
-            Margin="2"
-            Padding="10,5"
-            extensions:Extensions.Icon="📄"
-            Command="{Binding SelectSingleCutCommand}"
-            Content="Single Cut"
-            Style="{StaticResource ToolbarButtons}" />
+        <!--  Image and Overlay  -->
+        <Grid Grid.Column="0" ClipToBounds="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <RadioButton
-            Grid.Row="0"
+            <Viewbox
+                Grid.Row="0"
+                Stretch="Uniform"
+                StretchDirection="Both">
+                <Grid>
+                    <Image
+                        x:Name="TifImage"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        MouseLeftButtonDown="TifImage_MouseLeftButtonDown"
+                        Source="{Binding DisplayedImage}"
+                        Stretch="None" />
+
+                    <!--  The canvas for markers and rectangles  -->
+                    <Canvas
+                        x:Name="ClickCanvas"
+                        Background="Transparent"
+                        IsHitTestVisible="False" />
+                </Grid>
+            </Viewbox>
+
+            <!--  Sliders  -->
+            <Grid Grid.Row="1" Margin="20,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Foreground="LightGray"
+                        Text="Contrast" />
+                    <Slider
+                        Width="200"
+                        extensions:Extensions.DisplayValue="{Binding SliderADisplayLabel}"
+                        IsSnapToTickEnabled="True"
+                        Maximum="4"
+                        Minimum="0"
+                        Style="{StaticResource DynamicSlider}"
+                        TickFrequency="1"
+                        Value="{Binding SliderAValue, Mode=TwoWay}" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Foreground="LightGray"
+                        Text="Margin" />
+                    <Slider
+                        Width="200"
+                        extensions:Extensions.DisplayValue="{Binding SliderBDisplayLabel}"
+                        IsSnapToTickEnabled="True"
+                        Maximum="3"
+                        Minimum="0"
+                        Style="{StaticResource DynamicSlider}"
+                        TickFrequency="1"
+                        Value="{Binding SliderBValue, Mode=TwoWay}" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!--  Buttons  -->
+        <StackPanel
             Grid.Column="1"
-            Margin="2"
-            Padding="10,5"
-            extensions:Extensions.Icon="📑"
-            Command="{Binding SelectBatchCutCommand}"
-            Content="Batch Cut"
-            IsChecked="True"
-            Style="{StaticResource ToolbarButtons}" />
-
-        <!--  ContentPresenter for subviews  -->
-        <ContentPresenter
-            Grid.Row="1"
-            Grid.ColumnSpan="2"
+            Width="140"
             Margin="10"
-            Content="{Binding SelectedContentView}" />
+            VerticalAlignment="Top">
+            <!--  Mode Toggle  -->
+            <ToggleButton
+                Height="60"
+                toggle:ToggleSwitchHelper.IconChecked="✨"
+                toggle:ToggleSwitchHelper.IconUnchecked="🖊️"
+                toggle:ToggleSwitchHelper.LabelChecked="Automatic"
+                toggle:ToggleSwitchHelper.LabelUnchecked="Manual"
+                IsChecked="{Binding IsBatchCutMode, Mode=TwoWay}"
+                Style="{StaticResource DynamicToggleButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="📤"
+                Command="{Binding UploadTifCommand}"
+                Content="Upload .tif"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="💾"
+                Command="{Binding SaveSegmentsCommand}"
+                Content="Save Segment(s)"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="📋"
+                Command="{Binding CopyPathToClipboardCommand}"
+                Content="Copy Path"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                Margin="0,0,0,10"
+                extensions:Extensions.Icon="↩️"
+                Command="{Binding RemoveLastMarkerCommand}"
+                Content="Remove Last"
+                Style="{StaticResource DynamicButton}" />
+
+            <Button
+                Height="60"
+                extensions:Extensions.Icon="❌"
+                Command="{Binding ClearMarkersCommand}"
+                Content="Remove All"
+                Style="{StaticResource DynamicButton}" />
+        </StackPanel>
     </Grid>
 </UserControl>

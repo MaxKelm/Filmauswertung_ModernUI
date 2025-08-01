@@ -91,6 +91,7 @@
     <Compile Include="Core\Interfaces\IImageService.cs" />
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
+    <Compile Include="MVVM\Model\CutModel.cs" />
     <Compile Include="MVVM\Model\SegmentationEngine.cs" />
     <Compile Include="MVVM\View\ToastWindow.xaml.cs">
       <DependentUpon>ToastWindow.xaml</DependentUpon>
@@ -99,6 +100,8 @@
     <Compile Include="Services\ImageSegmentationService.cs" />
     <Compile Include="Services\ImageService.cs" />
     <Compile Include="Services\Importer.cs" />
+    <Compile Include="Services\SliderHelper.cs" />
+    <Compile Include="Services\ToggleSwitchHelper.cs" />
     <Page Include="MVVM\View\DoseViewerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -123,23 +126,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MVVM\View\ViewCutRotateViews\BatchCutView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
     <Page Include="MVVM\View\ViewCutRotateViews\CutView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="MVVM\View\ViewCutRotateViews\RotateView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="MVVM\View\ViewCutRotateViews\SingleCutView.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="MVVM\View\ViewCutRotateViews\ViewView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -163,6 +154,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Theme\ToggleSwitchTheme.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Theme\ToolbarButtons.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -174,11 +169,8 @@
     <Compile Include="MVVM\ViewModel\CalibrationViewModel.cs" />
     <Compile Include="MVVM\ViewModel\MainViewModel.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModel.cs" />
-    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\BatchCutViewModel.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\CutViewModel.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\RotateViewModel.cs" />
-    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\SingleCutViewModel.cs" />
-    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\ViewViewModel.cs" />
     <Compile Include="MVVM\View\DoseViewerView.xaml.cs">
       <DependentUpon>DoseViewerView.xaml</DependentUpon>
     </Compile>
@@ -194,20 +186,11 @@
     <Compile Include="MVVM\View\ViewCutRotateView.xaml.cs">
       <DependentUpon>ViewCutRotateView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="MVVM\View\ViewCutRotateViews\BatchCutView.xaml.cs">
-      <DependentUpon>BatchCutView.xaml</DependentUpon>
-    </Compile>
     <Compile Include="MVVM\View\ViewCutRotateViews\CutView.xaml.cs">
       <DependentUpon>CutView.xaml</DependentUpon>
     </Compile>
     <Compile Include="MVVM\View\ViewCutRotateViews\RotateView.xaml.cs">
       <DependentUpon>RotateView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="MVVM\View\ViewCutRotateViews\SingleCutView.xaml.cs">
-      <DependentUpon>SingleCutView.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="MVVM\View\ViewCutRotateViews\ViewView.xaml.cs">
-      <DependentUpon>ViewView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>

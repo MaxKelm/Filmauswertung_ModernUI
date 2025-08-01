@@ -77,6 +77,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 SuggestedFileName = $"ROI_{cropX}_{cropY}_{cropWidth}x{cropHeight}.tif"
             };
         }
+
         public Rect InflateAndClampRect(Rect rect, double marginFactor, int imageWidth, int imageHeight)
         {
             double marginWidth = rect.Width * marginFactor;
