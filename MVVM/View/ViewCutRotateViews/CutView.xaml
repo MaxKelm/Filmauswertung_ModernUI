@@ -102,7 +102,7 @@
                         Width="200"
                         extensions:Extensions.DisplayValue="{Binding ToleranceSliderLabel}"
                         IsSnapToTickEnabled="True"
-                        Maximum="50"
+                        Maximum="{Binding ToleranceMax}"
                         Minimum="1"
                         Style="{StaticResource DynamicSlider}"
                         TickFrequency="1"

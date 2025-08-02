@@ -35,6 +35,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         private bool _isBatchCutMode = true;
         private byte _contrastValue=1;
         private byte _toleranceValue=10;
+        public byte ToleranceMax => 50;
         private int _marginValue=1;
         private string _loadedImageBaseName;
         private int _roiSaveCount;
@@ -75,7 +76,8 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
 
-        public string ToleranceSliderLabel => _toleranceValue.ToString();
+        public string ToleranceSliderLabel => $"{(_toleranceValue / (double)ToleranceMax * 100):0}%";
+
 
         public int MarginValue
         {
