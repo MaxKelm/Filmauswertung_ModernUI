@@ -126,14 +126,6 @@
             <Button
                 Height="60"
                 Margin="0,0,0,10"
-                extensions:Extensions.Icon="📋"
-                Command="{Binding CopyPathToClipboardCommand}"
-                Content="Copy Path"
-                Style="{StaticResource DynamicButton}" />
-
-            <Button
-                Height="60"
-                Margin="0,0,0,10"
                 extensions:Extensions.Icon="↩️"
                 Command="{Binding RemoveLastMarkerCommand}"
                 Content="Remove Last"

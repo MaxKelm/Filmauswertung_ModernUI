@@ -19,7 +19,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         // Commands for UI buttons
         public RelayCommand UploadTifCommand { get; }
         public RelayCommand SaveSegmentsCommand { get; }
-        public RelayCommand CopyPathToClipboardCommand { get; }
         public RelayCommand RemoveLastMarkerCommand { get; }
         public RelayCommand ClearMarkersCommand { get; }
 
@@ -100,7 +99,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             Markers = new ReadOnlyObservableCollection<Marker>(_cutModel.Markers);
             UploadTifCommand = new RelayCommand(_ => UploadTif());
             SaveSegmentsCommand = new RelayCommand(SaveSegments);
-            CopyPathToClipboardCommand = new RelayCommand(CopyPathToClipboard);
             RemoveLastMarkerCommand = new RelayCommand(_ => RemoveLastMarker());
             ClearMarkersCommand = new RelayCommand(_ =>
             {
@@ -217,12 +215,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                     Debug.WriteLine($"Failed to copy to clipboard: {ex.Message}");
                 }
             }
-        }
-
-
-        private void CopyPathToClipboard(object obj)
-        {
-            // TODO: Implement copy path logic
         }
 
         private void RemoveLastMarker()
