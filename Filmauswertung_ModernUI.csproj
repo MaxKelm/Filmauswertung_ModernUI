@@ -87,6 +87,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Converters\OffsetConverter.cs" />
     <Compile Include="Core\Extensions.cs" />
     <Compile Include="Core\Interfaces\IImageService.cs" />
     <Compile Include="Core\ObservableObject.cs" />
@@ -97,6 +98,7 @@
       <DependentUpon>ToastWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Services\Exporter.cs" />
+    <Compile Include="Services\ImageProcessingService.cs" />
     <Compile Include="Services\ImageSegmentationService.cs" />
     <Compile Include="Services\ImageService.cs" />
     <Compile Include="Services\Importer.cs" />

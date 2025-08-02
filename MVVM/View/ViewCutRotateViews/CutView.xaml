@@ -72,7 +72,7 @@
                         extensions:Extensions.DisplayValue="{Binding ContrastSliderLabel}"
                         IsSnapToTickEnabled="True"
                         Maximum="4"
-                        Minimum="0"
+                        Minimum="1"
                         Style="{StaticResource DynamicSlider}"
                         TickFrequency="1"
                         Value="{Binding ContrastValue, Mode=TwoWay}" />

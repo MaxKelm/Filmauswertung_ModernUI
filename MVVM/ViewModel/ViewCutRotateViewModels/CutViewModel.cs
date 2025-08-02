@@ -1,4 +1,5 @@
 ﻿using Filmauswertung_ModernUI.Core;
+using Filmauswertung_ModernUI.Core.Interfaces;
 using Filmauswertung_ModernUI.MVVM.Model;
 using Filmauswertung_ModernUI.MVVM.View;
 using Filmauswertung_ModernUI.Services;
@@ -25,13 +26,14 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
         #region Services and Models
         private readonly Core.Interfaces.IImageService _imageService = new ImageService();
+        private readonly Core.Interfaces.IImageProcessingService _imageProcessingService = new ImageProcessingService();
         private readonly SegmentationEngine _segmentationEngine = new SegmentationEngine();
         private readonly CutModel _cutModel = new CutModel();
         #endregion
 
         #region State Fields
         private bool _isBatchCutMode = true;
-        private byte _contrastValue=0;
+        private byte _contrastValue=1;
         private byte _toleranceValue=10;
         private int _marginValue=1;
         private string _loadedImageBaseName;
@@ -39,6 +41,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         private string _lastSavedFolder;
         private BitmapImage _displayedImage;
         private Point? _lastMarkerPoint;
+        private BitmapImage _originalImage;
         #endregion
 
         #region Properties
@@ -93,7 +96,15 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         public BitmapImage DisplayedImage
         {
             get => _displayedImage;
-            set => SetProperty(ref _displayedImage, value);
+            set
+            {
+                if (SetProperty(ref _displayedImage, value))
+                {
+                    // Keep original image reference when new image is loaded
+                    _originalImage = value;
+                    ApplyContrast();
+                }
+            }
         }
 
         public Point? LastMarkerPoint
@@ -158,6 +169,20 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
 
+        private void ApplyContrast()
+        {
+            if (_originalImage == null)
+                return;
+
+            try
+            {
+                DisplayedImage = _imageProcessingService.AdjustContrast(_originalImage, _contrastValue);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error adjusting contrast: {ex.Message}");
+            }
+        }
         private void RemoveLastMarker()
         {
             if (_cutModel.Markers.Count > 0)

@@ -13,5 +13,8 @@ namespace Filmauswertung_ModernUI.Core.Interfaces
         BitmapImage LoadImage(string path);
         void SaveRoi(BitmapSource image, Rect roi, string savePath);
     }
-
+    public interface IImageProcessingService
+    {
+        BitmapImage AdjustContrast(BitmapImage sourceImage, int contrastLevel);
+    }
 }
