@@ -59,10 +59,11 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             {
                 if (SetProperty(ref _contrastValue, value))
                     OnPropertyChanged(nameof(ContrastSliderLabel));
+                    ApplyContrast();
             }
         }
 
-        public string ContrastSliderLabel => _contrastValue.ToString();
+        public string ContrastSliderLabel => SliderContrastHelper.GetLabel(_contrastValue);
 
         public byte ToleranceValue
         {
@@ -96,16 +97,9 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         public BitmapImage DisplayedImage
         {
             get => _displayedImage;
-            set
-            {
-                if (SetProperty(ref _displayedImage, value))
-                {
-                    // Keep original image reference when new image is loaded
-                    _originalImage = value;
-                    ApplyContrast();
-                }
-            }
+            set => SetProperty(ref _displayedImage, value);
         }
+
 
         public Point? LastMarkerPoint
         {
@@ -142,7 +136,9 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             try
             {
-                DisplayedImage = _imageService.LoadImage(selectedPath);
+                var image = _imageService.LoadImage(selectedPath);
+                _originalImage = image;
+                DisplayedImage = _imageProcessingService.AdjustContrast(_originalImage, _contrastValue);
                 _loadedImageBaseName = Path.GetFileNameWithoutExtension(selectedPath);
                 ResetState();
             }
@@ -157,6 +153,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             if (DisplayedImage == null)
                 return;
 
+            //_contrastValue = 1;
             string baseName = string.IsNullOrEmpty(_loadedImageBaseName) ? "Image" : _loadedImageBaseName;
 
             if (Segments.Count == 1)
@@ -183,6 +180,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 Debug.WriteLine($"Error adjusting contrast: {ex.Message}");
             }
         }
+
         private void RemoveLastMarker()
         {
             if (_cutModel.Markers.Count > 0)
@@ -230,7 +228,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             try
             {
-                _imageService.SaveRoi(DisplayedImage, rect, exportPath);
+                _imageService.SaveRoi(_originalImage, rect, exportPath);
                 _roiSaveCount++;
                 _lastSavedFolder = Path.GetDirectoryName(exportPath);
                 CopyPathToClipboardWithToast(_lastSavedFolder);
@@ -256,7 +254,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
                 try
                 {
-                    _imageService.SaveRoi(DisplayedImage, rect, savePath);
+                    _imageService.SaveRoi(_originalImage, rect, savePath);
                 }
                 catch (Exception ex)
                 {

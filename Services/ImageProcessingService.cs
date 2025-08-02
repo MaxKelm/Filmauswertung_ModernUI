@@ -1,85 +1,108 @@
-﻿// ImageProcessingService.cs
+﻿using Filmauswertung_ModernUI.Core.Interfaces;
 using System;
-using System.Windows.Media.Imaging;
+using System.Diagnostics;
 using System.Windows.Media;
-using System.Windows;
-using Filmauswertung_ModernUI.Core.Interfaces;
+using System.Windows.Media.Imaging;
 
-namespace Filmauswertung_ModernUI.Services
+public class ImageProcessingService : IImageProcessingService
 {
-    public class ImageProcessingService : IImageProcessingService
+    public BitmapImage AdjustContrast(BitmapImage sourceImage, int contrastLevel)
     {
-        public BitmapImage AdjustContrast(BitmapImage sourceImage, int contrastLevel)
+        if (sourceImage == null)
         {
-            if (sourceImage == null)
-                throw new ArgumentNullException(nameof(sourceImage));
+            throw new ArgumentNullException(nameof(sourceImage));
+        }
 
-            // contrastLevel from 1 (low) to 4 (high)
-            // Map contrastLevel to contrast factor (example: 1->0.8, 2->1.0, 3->1.2, 4->1.4)
-            double contrastFactor = 0.6 + 0.2 * contrastLevel;
+        try
+        {
+            double factor = (contrastLevel - 1) / 3.0;  // factor from 0 to 1
 
-            // Convert BitmapImage to WriteableBitmap for pixel manipulation
-            var writableBitmap = new WriteableBitmap(sourceImage);
+            BitmapSource enhanced = EnhanceContrast(sourceImage, factor);
 
-            int width = writableBitmap.PixelWidth;
-            int height = writableBitmap.PixelHeight;
-            int stride = width * (writableBitmap.Format.BitsPerPixel / 8);
-            byte[] pixelData = new byte[height * stride];
-            writableBitmap.CopyPixels(pixelData, stride, 0);
+            BitmapImage result = BitmapSourceToBitmapImage(enhanced);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
 
-            // Adjust contrast per pixel
-            for (int i = 0; i < pixelData.Length; i += 4)
+    private BitmapSource EnhanceContrast(BitmapSource source, double factor)
+    {
+        if (source.Format != PixelFormats.Bgra32)
+        {
+            source = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        }
+
+        int width = source.PixelWidth;
+        int height = source.PixelHeight;
+        int stride = width * 4;
+        byte[] pixelData = new byte[height * stride];
+        source.CopyPixels(pixelData, stride, 0);
+
+        // Create histograms for R, G, B
+        int[][] histograms = new int[3][];
+        for (int i = 0; i < 3; i++)
+            histograms[i] = new int[256];
+
+        for (int i = 0; i < pixelData.Length; i += 4)
+        {
+            histograms[0][pixelData[i + 0]]++; // B
+            histograms[1][pixelData[i + 1]]++; // G
+            histograms[2][pixelData[i + 2]]++; // R
+        }
+
+        // Calculate cumulative distribution function (CDF)
+        int[][] cdf = new int[3][];
+        for (int c = 0; c < 3; c++)
+        {
+            cdf[c] = new int[256];
+            cdf[c][0] = histograms[c][0];
+            for (int i = 1; i < 256; i++)
             {
-                // Pixels in BGRA order
-                byte b = pixelData[i];
-                byte g = pixelData[i + 1];
-                byte r = pixelData[i + 2];
-                byte a = pixelData[i + 3];
-
-                pixelData[i] = AdjustContrastValue(b, contrastFactor);
-                pixelData[i + 1] = AdjustContrastValue(g, contrastFactor);
-                pixelData[i + 2] = AdjustContrastValue(r, contrastFactor);
-                pixelData[i + 3] = a; // Alpha remains the same
+                cdf[c][i] = cdf[c][i - 1] + histograms[c][i];
             }
-
-            var contrastedBitmap = new WriteableBitmap(width, height, writableBitmap.DpiX, writableBitmap.DpiY, writableBitmap.Format, null);
-            contrastedBitmap.WritePixels(new Int32Rect(0, 0, width, height), pixelData, stride, 0);
-            // Convert back to BitmapImage
-            //return ConvertWriteableBitmapToBitmapImage(contrastedBitmap);
-            return sourceImage;
         }
 
-        private byte AdjustContrastValue(byte colorValue, double contrastFactor)
+        // Normalize CDF to [0, 255]
+        byte[][] lut = new byte[3][];
+        for (int c = 0; c < 3; c++)
         {
-            double color = colorValue / 255.0;
-            color -= 0.5;
-            color *= contrastFactor;
-            color += 0.5;
-            color = Clamp(color, 0, 1);
-            return (byte)(color * 255);
+            lut[c] = new byte[256];
+            int cdfMin = Array.Find(cdf[c], val => val != 0);
+            double totalPixels = width * height;
+            for (int i = 0; i < 256; i++)
+            {
+                double value = (cdf[c][i] - cdfMin) / (totalPixels - cdfMin);
+                value = value * 255;
+
+                // Blend with original value using 'factor'
+                lut[c][i] = (byte)(factor * value + (1 - factor) * i);
+            }
         }
 
-        private BitmapImage ConvertWriteableBitmapToBitmapImage(WriteableBitmap wBitmap)
+        // Apply LUT
+        for (int i = 0; i < pixelData.Length; i += 4)
         {
-            // Create a new WriteableBitmap copy (detached from original stream)
-            var copiedBitmap = new WriteableBitmap(wBitmap);
-
-            // Freeze for thread safety
-            copiedBitmap.Freeze();
-
-            // Convert WriteableBitmap directly to BitmapImage is tricky, 
-            // but often you can just return BitmapSource or WriteableBitmap instead of BitmapImage
-
-            // If BitmapImage is required, fallback to encoding method but with async
-            return ConvertWriteableBitmapToBitmapImageViaEncoder(copiedBitmap);
+            pixelData[i + 0] = lut[0][pixelData[i + 0]]; // B
+            pixelData[i + 1] = lut[1][pixelData[i + 1]]; // G
+            pixelData[i + 2] = lut[2][pixelData[i + 2]]; // R
         }
 
-        private BitmapImage ConvertWriteableBitmapToBitmapImageViaEncoder(WriteableBitmap wBitmap)
+        return BitmapSource.Create(width, height, source.DpiX, source.DpiY,
+                                    PixelFormats.Bgra32, null, pixelData, stride);
+    }
+
+
+    private BitmapImage BitmapSourceToBitmapImage(BitmapSource bitmapSource)
+    {
+        try
         {
             using (var memoryStream = new System.IO.MemoryStream())
             {
                 var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(wBitmap));
+                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
                 encoder.Save(memoryStream);
                 memoryStream.Position = 0;
 
@@ -89,18 +112,12 @@ namespace Filmauswertung_ModernUI.Services
                 bitmapImage.StreamSource = memoryStream;
                 bitmapImage.EndInit();
                 bitmapImage.Freeze();
-
                 return bitmapImage;
             }
         }
-
-
-        private double Clamp(double value, double min, double max)
+        catch (Exception ex)
         {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
+            throw;
         }
     }
 }
-

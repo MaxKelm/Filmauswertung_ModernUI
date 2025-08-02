@@ -38,10 +38,10 @@ namespace Filmauswertung_ModernUI.Services
     {
         private static readonly Dictionary<int, string> SliderLabels = new Dictionary<int, string>()
         {
-            { 0, "No Margin" },
-            { 1, "Tight Margin" },
-            { 2, "Moderate Margin" },
-            { 3, "Wide Margin" },
+            { 1, "No Contrast Enhancement" },
+            { 2, "Slight Enhancement" },
+            { 3, "Moderate Enhancement" },
+            { 4, "Strong Enhancement" },
         };
 
         private static readonly Dictionary<int, double> ContrastFactor = new Dictionary<int, double>()
