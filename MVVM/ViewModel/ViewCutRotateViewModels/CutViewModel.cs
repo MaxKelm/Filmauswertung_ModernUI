@@ -38,22 +38,57 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 }
             }
         }
-
-        private int _sliderBValue;
-        public int SliderBValue
+        private byte _contrastValue;
+        public byte ContrastValue
         {
-            get => _sliderBValue;
+            get => _contrastValue;
             set
             {
-                if (_sliderBValue != value)
+                if (_contrastValue != value)
                 {
-                    _sliderBValue = value;
-                    OnPropertyChanged(nameof(SliderBValue));
-                    OnPropertyChanged(nameof(SliderBDisplayLabel));
+                    _contrastValue = value;
+                    OnPropertyChanged(nameof(ContrastValue));
+                    OnPropertyChanged(nameof(ContrastSliderLabel));
                 }
             }
         }
-        public string SliderBDisplayLabel => SliderMarginHelper.GetLabel(_sliderBValue);
+
+        public string ContrastSliderLabel => _contrastValue.ToString();
+        private byte _toleranceValue;
+        public byte ToleranceValue
+        {
+            get => _toleranceValue;
+            set
+            {
+                if (_toleranceValue != value)
+                {
+                    _toleranceValue = value;
+                    OnPropertyChanged(nameof(ToleranceValue));
+                    OnPropertyChanged(nameof(ToleranceSliderLabel));
+                }
+            }
+        }
+
+        public string ToleranceSliderLabel => _toleranceValue.ToString();
+
+
+        private int _marginValue;
+        public int MarginValue
+        {
+            get => _marginValue;
+            set
+            {
+                if (_marginValue != value)
+                {
+                    _marginValue = value;
+                    OnPropertyChanged(nameof(MarginValue));
+                    OnPropertyChanged(nameof(MarginSliderLabel));
+                }
+            }
+        }
+
+        public string MarginSliderLabel => SliderMarginHelper.GetLabel(_marginValue);
+
 
         private string _loadedImageBaseName;
         private int _roiSaveCount;
@@ -249,13 +284,12 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             LastMarkerPoint = uiPoint;
 
-            byte tolerance = 50;
-            var result = _segmentationEngine.SegmentRegion(DisplayedImage, uiPoint, tolerance);
+            var result = _segmentationEngine.SegmentRegion(DisplayedImage, uiPoint, _toleranceValue);
 
             if (result != null && !result.BoundingBox.IsEmpty)
             {
                 var originalBox = result.BoundingBox;
-                var marginFactor = SliderMarginHelper.GetMarginFactor(_sliderBValue);
+                var marginFactor = SliderMarginHelper.GetMarginFactor(_marginValue);
 
                 var inflatedBox = _segmentationEngine.InflateAndClampRect(
                     originalBox, marginFactor, DisplayedImage.PixelWidth, DisplayedImage.PixelHeight);

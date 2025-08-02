@@ -55,6 +55,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" HorizontalAlignment="Center">
@@ -64,13 +65,13 @@
                         Text="Contrast" />
                     <Slider
                         Width="200"
-                        extensions:Extensions.DisplayValue="{Binding SliderADisplayLabel}"
+                        extensions:Extensions.DisplayValue="{Binding ContrastSliderLabel}"
                         IsSnapToTickEnabled="True"
                         Maximum="4"
                         Minimum="0"
                         Style="{StaticResource DynamicSlider}"
                         TickFrequency="1"
-                        Value="{Binding SliderAValue, Mode=TwoWay}" />
+                        Value="{Binding ContrastValue, Mode=TwoWay}" />
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" HorizontalAlignment="Center">
@@ -80,13 +81,28 @@
                         Text="Margin" />
                     <Slider
                         Width="200"
-                        extensions:Extensions.DisplayValue="{Binding SliderBDisplayLabel}"
+                        extensions:Extensions.DisplayValue="{Binding MarginSliderLabel}"
                         IsSnapToTickEnabled="True"
                         Maximum="3"
                         Minimum="0"
                         Style="{StaticResource DynamicSlider}"
                         TickFrequency="1"
-                        Value="{Binding SliderBValue, Mode=TwoWay}" />
+                        Value="{Binding MarginValue, Mode=TwoWay}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Foreground="LightGray"
+                        Text="Tolerance" />
+                    <Slider
+                        Width="200"
+                        extensions:Extensions.DisplayValue="{Binding ToleranceSliderLabel}"
+                        IsSnapToTickEnabled="True"
+                        Maximum="50"
+                        Minimum="1"
+                        Style="{StaticResource DynamicSlider}"
+                        TickFrequency="1"
+                        Value="{Binding ToleranceValue, Mode=TwoWay}" />
                 </StackPanel>
             </Grid>
         </Grid>
