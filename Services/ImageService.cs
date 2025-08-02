@@ -47,6 +47,20 @@ namespace Filmauswertung_ModernUI.Services
                 encoder.Save(fileStream);
             }
         }
+        public void SaveImage(BitmapSource image, string savePath)
+        {
+            if (image == null)
+                throw new ArgumentNullException(nameof(image));
+
+            var encoder = new TiffBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(image));
+
+            using (var fileStream = new FileStream(savePath, FileMode.Create))
+            {
+                encoder.Save(fileStream);
+            }
+        }
+
 
         // New method to save cropped pixels from segmentation
         public void SaveSegmentCroppedImage(SegmentResult segment, string savePath)
@@ -73,6 +87,29 @@ namespace Filmauswertung_ModernUI.Services
             using (var fileStream = new FileStream(savePath, FileMode.Create))
             {
                 encoder.Save(fileStream);
+            }
+        }
+
+        // Converts a BitmapSource (e.g. TransformedBitmap) into a BitmapImage
+        public BitmapImage ConvertToBitmapImage(BitmapSource source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            using (MemoryStream ms = new MemoryStream())
+            {
+                BitmapEncoder encoder = new TiffBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(source));
+                encoder.Save(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                BitmapImage bmp = new BitmapImage();
+                bmp.BeginInit();
+                bmp.CacheOption = BitmapCacheOption.OnLoad;
+                bmp.StreamSource = ms;
+                bmp.EndInit();
+                bmp.Freeze(); // Freeze for thread safety
+                return bmp;
             }
         }
     }
