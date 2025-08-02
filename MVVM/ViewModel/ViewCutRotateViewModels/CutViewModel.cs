@@ -267,22 +267,16 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         {
             if (DisplayedImage == null)
             {
-                Debug.WriteLine("[AddMarker] DisplayedImage is null, aborting.");
                 return;
             }
 
             if (imageControl == null)
             {
-                Debug.WriteLine("[AddMarker] imageControl is null, aborting.");
                 return;
             }
 
-            Debug.WriteLine($"[AddMarker] UI Point: {uiPoint}");
-
             // Map uiPoint from control coordinates to image pixel coordinates
             var pixelPoint = ConvertToImagePixelCoordinates(uiPoint, imageControl, DisplayedImage);
-
-            Debug.WriteLine($"[AddMarker] Converted to pixel coordinates: {pixelPoint}");
 
             const double epsilon = 0.1;
             bool duplicateMarker = _cutModel.Markers.Any(m =>
@@ -291,36 +285,27 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             if (duplicateMarker)
             {
-                Debug.WriteLine("[AddMarker] Marker too close to existing one, skipping.");
                 return;
             }
 
             LastMarkerPoint = pixelPoint;
-            Debug.WriteLine($"[AddMarker] LastMarkerPoint set to: {LastMarkerPoint}");
 
             var result = _segmentationEngine.SegmentRegion(DisplayedImage, pixelPoint, _toleranceValue);
 
             if (result == null)
             {
-                Debug.WriteLine("[AddMarker] Segmentation result is null, aborting.");
                 return;
             }
 
             if (result.BoundingBox.IsEmpty)
             {
-                Debug.WriteLine("[AddMarker] Result bounding box is empty, aborting.");
                 return;
             }
 
-            Debug.WriteLine($"[AddMarker] Segmentation bounding box: {result.BoundingBox}");
-
             var marginFactor = SliderMarginHelper.GetMarginFactor(_marginValue);
-            Debug.WriteLine($"[AddMarker] Margin factor: {marginFactor}");
 
             var inflatedBox = _segmentationEngine.InflateAndClampRect(
                 result.BoundingBox, marginFactor, DisplayedImage.PixelWidth, DisplayedImage.PixelHeight);
-
-            Debug.WriteLine($"[AddMarker] Inflated bounding box: {inflatedBox}");
 
             // Reverse transform inflatedBox from pixel coordinates to UI coordinates
             var scaleX = DisplayedImage.PixelWidth / imageControl.ActualWidth;
@@ -337,12 +322,10 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             if (!segmentExists)
             {
                 _cutModel.Segments.Add(new Segment(uiRect));
-                Debug.WriteLine("[AddMarker] Added new segment (UI coordinates).");
             }
             var uiMarkerPoint = new Point(pixelPoint.X / scaleX, pixelPoint.Y / scaleY);
 
             _cutModel.Markers.Add(new Marker(uiMarkerPoint));
-            Debug.WriteLine("[AddMarker] Added new marker.");
         }
 
         // Helper method to map UI point to image pixel coordinates
@@ -351,17 +334,11 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             var controlWidth = imageControl.ActualWidth;
             var controlHeight = imageControl.ActualHeight;
 
-            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Control size: {controlWidth} x {controlHeight}");
-
             var imagePixelWidth = bitmapImage.PixelWidth;
             var imagePixelHeight = bitmapImage.PixelHeight;
 
-            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Image pixel size: {imagePixelWidth} x {imagePixelHeight}");
-
             double scaleX = imagePixelWidth / controlWidth;
             double scaleY = imagePixelHeight / controlHeight;
-
-            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Scale factors - X: {scaleX}, Y: {scaleY}");
 
             double pixelX = uiPoint.X * scaleX;
             double pixelY = uiPoint.Y * scaleY;
@@ -369,8 +346,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             // Clamp coordinates to image bounds
             pixelX = Math.Max(0, Math.Min(pixelX, imagePixelWidth - 1));
             pixelY = Math.Max(0, Math.Min(pixelY, imagePixelHeight - 1));
-
-            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Mapped and clamped pixel point: ({pixelX}, {pixelY})");
 
             return new Point(pixelX, pixelY);
         }

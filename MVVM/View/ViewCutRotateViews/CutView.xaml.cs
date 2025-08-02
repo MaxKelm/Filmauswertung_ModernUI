@@ -107,6 +107,7 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
 
         private void AddMarkerEllipse(Point position)
         {
+            ClearAllMarkers();
             var ellipse = new Ellipse
             {
                 Fill = Brushes.Red,
