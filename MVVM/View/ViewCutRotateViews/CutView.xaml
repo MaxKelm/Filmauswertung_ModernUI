@@ -38,13 +38,17 @@
                         x:Name="TifImage"
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
-                        MouseLeftButtonDown="TifImage_MouseLeftButtonDown"
+                        MouseLeftButtonDown="OnImageMouseLeftButtonDown"
                         Source="{Binding DisplayedImage}"
                         Stretch="None" />
 
                     <!--  The canvas for markers and rectangles  -->
                     <Canvas
-                        x:Name="ClickCanvas"
+                        x:Name="RoiCanvas"
+                        Background="Transparent"
+                        IsHitTestVisible="False" />
+                    <Canvas
+                        x:Name="MarkerCanvas"
                         Background="Transparent"
                         IsHitTestVisible="False" />
                 </Grid>

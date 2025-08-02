@@ -1,8 +1,9 @@
-﻿using Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels;
+﻿using Filmauswertung_ModernUI.MVVM.Model;
+using Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,198 +15,250 @@ namespace Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews
 {
     public partial class CutView : UserControl
     {
+        #region Fields
         private Ellipse _previousMarker = null;
 
-        // ROI drawing state for single mode
         private bool _isDrawingRoi = false;
         private Point _roiStartPoint;
-        private Rectangle _currentRoiRect;
+        private readonly Rectangle _currentRoiRect;
 
+        #endregion
+
+        #region Constructor
         public CutView()
         {
             InitializeComponent();
+            _currentRoiRect = new Rectangle();
+
             Loaded += CutView_Loaded;
 
-            // Mouse event handlers for ROI drawing & marker placement
-            TifImage.MouseLeftButtonDown += TifImage_MouseLeftButtonDown;
-            TifImage.MouseMove += TifImage_MouseMove;
-            TifImage.MouseLeftButtonUp += TifImage_MouseLeftButtonUp;
-
-            // Prepare the ROI rectangle, hidden by default
-            _currentRoiRect = new Rectangle
-            {
-                Stroke = Brushes.Blue,
-                StrokeThickness = 2,
-                StrokeDashArray = new DoubleCollection { 4, 2 },
-                Fill = new SolidColorBrush(Color.FromArgb(60, 0, 0, 255)),
-                Visibility = Visibility.Collapsed,
-                Tag = "SegBox"
-            };
-            ClickCanvas.Children.Add(_currentRoiRect);
+            TifImage.MouseLeftButtonDown += OnImageMouseLeftButtonDown;
+            TifImage.MouseRightButtonDown += OnImageMouseRightButtonDown;
+            TifImage.MouseMove += OnImageMouseMove;
+            TifImage.MouseLeftButtonUp += OnImageMouseLeftButtonUp;
         }
+        #endregion
+
+        #region Initialization
 
         private void CutView_Loaded(object sender, RoutedEventArgs e)
         {
             if (DataContext is CutViewModel vm)
             {
-                ((INotifyCollectionChanged)vm.Segments).CollectionChanged += SegmentBoxes_CollectionChanged;
+                vm.MarkersChanged += Markers_CollectionChanged;
+                vm.SegmentsChanged += Segments_CollectionChanged;
                 vm.PropertyChanged += Vm_PropertyChanged;
             }
         }
+        #endregion
 
+        #region ViewModel Event Handlers
 
-        private void SegmentBoxes_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void Markers_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            if (DataContext is CutViewModel vm)
-            {
-                // Clear old rectangles
-                var toRemove = new List<UIElement>();
-                foreach (UIElement child in ClickCanvas.Children)
-                {
-                    if (child is Rectangle rect && rect.Tag?.ToString() == "SegBox" && rect != _currentRoiRect)
-                    {
-                        toRemove.Add(child);
-                    }
-                }
-                foreach (var el in toRemove)
-                    ClickCanvas.Children.Remove(el);
+            if (!(DataContext is CutViewModel vm)) return;
 
-                // Draw bounding boxes from Segments
-                foreach (var segment in vm.Segments)
-                {
-                    DrawBoundingBox(segment.BoundingBox);
-                }
+            if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems.Count > 0)
+            {
+                var newMarker = e.NewItems[0] as Marker;
+                AddMarkerEllipse(newMarker.Position);
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Remove)
+            {
+                RemoveLastMarkerEllipse();
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                ClearAllMarkers();
             }
         }
 
+        private void Segments_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (!(DataContext is CutViewModel vm)) return;
 
-        private void Vm_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+            if (e.Action == NotifyCollectionChangedAction.Add)
+            {
+                foreach (Segment seg in e.NewItems)
+                    AddSegmentRectangle(seg.BoundingBox);
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Remove)
+            {
+                // Remove rectangles corresponding to removed segments if necessary
+                RefreshSegmentRectangles();
+            }
+            else if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                ClearAllSegments();
+            }
+        }
+
+        private void Vm_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(CutViewModel.LastMarkerPoint))
             {
-                // Remove previous marker if exists
-                if (_previousMarker != null)
-                {
-                    Dispatcher.Invoke(() => ClickCanvas.Children.Remove(_previousMarker));
-                    _previousMarker = null;
-                }
+                // Optionally update UI or selection state based on LastMarkerPoint
             }
         }
 
-        private void DrawMarker(Point point)
+        #endregion
+
+        #region Marker Management
+
+        private void AddMarkerEllipse(Point position)
         {
-            var marker = new Ellipse
+            var ellipse = new Ellipse
             {
+                Fill = Brushes.Red,
                 Width = 10,
                 Height = 10,
-                Fill = Brushes.Red,
                 Stroke = Brushes.Black,
-                StrokeThickness = 1,
-                IsHitTestVisible = false
+                StrokeThickness = 1
             };
 
-            Canvas.SetLeft(marker, point.X - 5);
-            Canvas.SetTop(marker, point.Y - 5);
+            Canvas.SetLeft(ellipse, position.X - ellipse.Width / 2);
+            Canvas.SetTop(ellipse, position.Y - ellipse.Height / 2);
 
-            ClickCanvas.Children.Add(marker);
-            _previousMarker = marker;
+            MarkerCanvas.Children.Add(ellipse);
+            _previousMarker = ellipse;
         }
 
-        private void DrawBoundingBox(Rect box)
+        private void RemoveLastMarkerEllipse()
+        {
+            if (_previousMarker != null)
+            {
+                MarkerCanvas.Children.Remove(_previousMarker);
+                _previousMarker = null;
+            }
+        }
+
+        private void ClearAllMarkers()
+        {
+            MarkerCanvas.Children.Clear();
+            _previousMarker = null;
+        }
+
+        #endregion
+
+        #region Segment Management
+
+        private void AddSegmentRectangle(Rect rect)
         {
             var rectangle = new Rectangle
             {
-                Width = box.Width,
-                Height = box.Height,
-                Stroke = Brushes.Green,
-                StrokeThickness = 4,
-                StrokeDashArray = new DoubleCollection { 4, 2 },
-                Fill = new SolidColorBrush(Color.FromArgb(60, 0, 128, 0)),
-                Tag = "SegBox",
-                IsHitTestVisible = false
+                Stroke = Brushes.Blue,
+                StrokeThickness = 2,
+                Width = rect.Width,
+                Height = rect.Height
             };
 
-            Canvas.SetLeft(rectangle, box.X);
-            Canvas.SetTop(rectangle, box.Y);
+            Canvas.SetLeft(rectangle, rect.Left);
+            Canvas.SetTop(rectangle, rect.Top);
 
-            ClickCanvas.Children.Add(rectangle);
+            RoiCanvas.Children.Add(rectangle);
         }
 
-        private void TifImage_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void RefreshSegmentRectangles()
+        {
+            RoiCanvas.Children.Clear();
+            if (DataContext is CutViewModel vm)
+            {
+                foreach (var seg in vm.Segments)
+                {
+                    AddSegmentRectangle(seg.BoundingBox);
+                }
+            }
+        }
+
+        private void ClearAllSegments()
+        {
+            RoiCanvas.Children.Clear();
+        }
+
+        #endregion
+
+        #region ROI Drawing
+
+        private void OnImageMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!(DataContext is CutViewModel vm))
+                return;
+
+            var clickPoint = e.GetPosition(TifImage);
+
+            if (vm.IsBatchCutMode)
+            {
+                // In batch mode, add marker automatically instead of manual drawing
+                vm.AddMarker(clickPoint, TifImage);
+                return; // Skip manual ROI drawing
+            }
+
+            // Manual ROI drawing mode
+            _roiStartPoint = clickPoint;
+            _isDrawingRoi = true;
+
+            _currentRoiRect.Width = 0;
+            _currentRoiRect.Height = 0;
+            _currentRoiRect.Stroke = Brushes.Green;
+            _currentRoiRect.StrokeThickness = 2;
+
+            if (!RoiCanvas.Children.Contains(_currentRoiRect))
+                RoiCanvas.Children.Add(_currentRoiRect);
+        }
+
+
+        private void OnImageMouseMove(object sender, MouseEventArgs e)
+        {
+            if (IsBatchCutModeEnabled() || !_isDrawingRoi) return;
+
+            Point currentPoint = e.GetPosition(TifImage);
+
+            double x = Math.Min(currentPoint.X, _roiStartPoint.X);
+            double y = Math.Min(currentPoint.Y, _roiStartPoint.Y);
+            double width = Math.Abs(currentPoint.X - _roiStartPoint.X);
+            double height = Math.Abs(currentPoint.Y - _roiStartPoint.Y);
+
+            _currentRoiRect.Width = width;
+            _currentRoiRect.Height = height;
+
+            Canvas.SetLeft(_currentRoiRect, x);
+            Canvas.SetTop(_currentRoiRect, y);
+        }
+
+        private void OnImageMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (IsBatchCutModeEnabled() || !_isDrawingRoi) return;
+
+            _isDrawingRoi = false;
+
+            if (DataContext is CutViewModel vm)
+            {
+                var rect = new Rect(Canvas.GetLeft(_currentRoiRect), Canvas.GetTop(_currentRoiRect), _currentRoiRect.Width, _currentRoiRect.Height);
+                vm.AddSegmentBox(rect);
+            }
+
+            RoiCanvas.Children.Remove(_currentRoiRect);
+            _currentRoiRect.Width = 0;
+            _currentRoiRect.Height = 0;
+        }
+
+
+        private void OnImageMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (DataContext is CutViewModel vm)
             {
-                Point clickPoint = e.GetPosition(TifImage);
-
-                if (vm.IsBatchCutMode)
-                {
-                    // Remove previous marker, add new marker
-                    if (_previousMarker != null)
-                        ClickCanvas.Children.Remove(_previousMarker);
-
-                    vm.AddMarker(clickPoint);
-                    DrawMarker(clickPoint);
-                }
-                else
-                {
-                    // Single mode: start ROI drawing
-                    _isDrawingRoi = true;
-                    _roiStartPoint = clickPoint;
-
-                    _currentRoiRect.Width = 0;
-                    _currentRoiRect.Height = 0;
-                    Canvas.SetLeft(_currentRoiRect, _roiStartPoint.X);
-                    Canvas.SetTop(_currentRoiRect, _roiStartPoint.Y);
-                    _currentRoiRect.Visibility = Visibility.Visible;
-
-                    Mouse.OverrideCursor = Cursors.Cross;
-
-                    TifImage.CaptureMouse();
-                }
+                vm.RemoveLastMarkerCommand.Execute(null);
             }
         }
 
-        private void TifImage_MouseMove(object sender, MouseEventArgs e)
+        #endregion
+        #region Helper Methods
+        private bool IsBatchCutModeEnabled()
         {
-            if (_isDrawingRoi && DataContext is CutViewModel)
-            {
-                Point currentPoint = e.GetPosition(TifImage);
-
-                double x = Math.Min(currentPoint.X, _roiStartPoint.X);
-                double y = Math.Min(currentPoint.Y, _roiStartPoint.Y);
-                double width = Math.Abs(currentPoint.X - _roiStartPoint.X);
-                double height = Math.Abs(currentPoint.Y - _roiStartPoint.Y);
-
-                Canvas.SetLeft(_currentRoiRect, x);
-                Canvas.SetTop(_currentRoiRect, y);
-                _currentRoiRect.Width = width;
-                _currentRoiRect.Height = height;
-            }
+            if (DataContext is CutViewModel vm)
+                return vm.IsBatchCutMode;
+            return false;
         }
-
-        private void TifImage_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            if (_isDrawingRoi && DataContext is CutViewModel vm && !vm.IsBatchCutMode)
-            {
-                _isDrawingRoi = false;
-                Mouse.OverrideCursor = null;
-                TifImage.ReleaseMouseCapture();
-
-                Point endPoint = e.GetPosition(TifImage);
-
-                double x = Math.Min(endPoint.X, _roiStartPoint.X);
-                double y = Math.Min(endPoint.Y, _roiStartPoint.Y);
-                double width = Math.Abs(endPoint.X - _roiStartPoint.X);
-                double height = Math.Abs(endPoint.Y - _roiStartPoint.Y);
-
-                if (width > 0 && height > 0)
-                {
-                    Rect newRect = new Rect(x, y, width, height);
-                    vm.AddSegmentBox(newRect);
-                }
-
-                _currentRoiRect.Visibility = Visibility.Collapsed;
-            }
-        }
+        #endregion
     }
 }

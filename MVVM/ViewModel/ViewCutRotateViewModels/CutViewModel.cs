@@ -16,155 +16,128 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
     internal class CutViewModel : ObservableObject
     {
-        // Commands for UI buttons
+        #region Commands
         public RelayCommand UploadTifCommand { get; }
         public RelayCommand SaveSegmentsCommand { get; }
         public RelayCommand RemoveLastMarkerCommand { get; }
         public RelayCommand ClearMarkersCommand { get; }
+        #endregion
 
+        #region Services and Models
         private readonly Core.Interfaces.IImageService _imageService = new ImageService();
         private readonly SegmentationEngine _segmentationEngine = new SegmentationEngine();
+        private readonly CutModel _cutModel = new CutModel();
+        #endregion
 
+        #region State Fields
         private bool _isBatchCutMode = true;
+        private byte _contrastValue=0;
+        private byte _toleranceValue=10;
+        private int _marginValue=1;
+        private string _loadedImageBaseName;
+        private int _roiSaveCount;
+        private string _lastSavedFolder;
+        private BitmapImage _displayedImage;
+        private Point? _lastMarkerPoint;
+        #endregion
+
+        #region Properties
+
         public bool IsBatchCutMode
         {
             get => _isBatchCutMode;
-            set
-            {
-                if (_isBatchCutMode != value)
-                {
-                    _isBatchCutMode = value;
-                    OnPropertyChanged(nameof(IsBatchCutMode));
-                }
-            }
+            set => SetProperty(ref _isBatchCutMode, value);
         }
-        private byte _contrastValue;
+        #region Sliders
         public byte ContrastValue
         {
             get => _contrastValue;
             set
             {
-                if (_contrastValue != value)
-                {
-                    _contrastValue = value;
-                    OnPropertyChanged(nameof(ContrastValue));
+                if (SetProperty(ref _contrastValue, value))
                     OnPropertyChanged(nameof(ContrastSliderLabel));
-                }
             }
         }
 
         public string ContrastSliderLabel => _contrastValue.ToString();
-        private byte _toleranceValue;
+
         public byte ToleranceValue
         {
             get => _toleranceValue;
             set
             {
-                if (_toleranceValue != value)
-                {
-                    _toleranceValue = value;
-                    OnPropertyChanged(nameof(ToleranceValue));
+                if (SetProperty(ref _toleranceValue, value))
                     OnPropertyChanged(nameof(ToleranceSliderLabel));
-                }
             }
         }
 
         public string ToleranceSliderLabel => _toleranceValue.ToString();
 
-
-        private int _marginValue;
         public int MarginValue
         {
             get => _marginValue;
             set
             {
-                if (_marginValue != value)
-                {
-                    _marginValue = value;
-                    OnPropertyChanged(nameof(MarginValue));
+                if (SetProperty(ref _marginValue, value))
                     OnPropertyChanged(nameof(MarginSliderLabel));
-                }
             }
         }
 
         public string MarginSliderLabel => SliderMarginHelper.GetLabel(_marginValue);
-
-
-        private string _loadedImageBaseName;
-        private int _roiSaveCount;
-        private string _lastSavedFolder;
-
-        private readonly CutModel _cutModel = new CutModel();
-
+        #endregion
         public ReadOnlyObservableCollection<Segment> Segments { get; }
         public ReadOnlyObservableCollection<Marker> Markers { get; }
+        public event NotifyCollectionChangedEventHandler SegmentsChanged;
+        public event NotifyCollectionChangedEventHandler MarkersChanged;
 
-
-        private BitmapImage _displayedImage;
         public BitmapImage DisplayedImage
         {
             get => _displayedImage;
-            set
-            {
-                if (_displayedImage != value)
-                {
-                    _displayedImage = value;
-                    OnPropertyChanged(nameof(DisplayedImage));
-                }
-            }
+            set => SetProperty(ref _displayedImage, value);
         }
 
-        private Point? _lastMarkerPoint;
         public Point? LastMarkerPoint
         {
             get => _lastMarkerPoint;
-            set
-            {
-                if (_lastMarkerPoint != value)
-                {
-                    _lastMarkerPoint = value;
-                    OnPropertyChanged(nameof(LastMarkerPoint));
-                }
-            }
+            set => SetProperty(ref _lastMarkerPoint, value);
         }
 
+        #endregion
+
+        #region Constructor
         public CutViewModel()
         {
             Segments = new ReadOnlyObservableCollection<Segment>(_cutModel.Segments);
             Markers = new ReadOnlyObservableCollection<Marker>(_cutModel.Markers);
+            _cutModel.Segments.CollectionChanged += (s, e) => SegmentsChanged?.Invoke(s, e);
+            _cutModel.Markers.CollectionChanged += (s, e) => MarkersChanged?.Invoke(s, e);
+
             UploadTifCommand = new RelayCommand(_ => UploadTif());
             SaveSegmentsCommand = new RelayCommand(SaveSegments);
             RemoveLastMarkerCommand = new RelayCommand(_ => RemoveLastMarker());
-            ClearMarkersCommand = new RelayCommand(_ =>
-            {
-                LastMarkerPoint = null;
-                _cutModel.Segments.Clear();
-                _cutModel.Markers.Clear();
-
-            });
+            ClearMarkersCommand = new RelayCommand(_ => ClearMarkers());
         }
+        #endregion
+
+        #region Command Methods
 
         private void UploadTif()
         {
             var tifImporter = new SingleFileImporter(new[] { ".tif" });
             string selectedPath = ImportDialogService.ShowDialog(tifImporter);
 
-            if (!string.IsNullOrEmpty(selectedPath))
-            {
-                try
-                {
-                    DisplayedImage = _imageService.LoadImage(selectedPath);
-                    _loadedImageBaseName = Path.GetFileNameWithoutExtension(selectedPath);
+            if (string.IsNullOrEmpty(selectedPath))
+                return;
 
-                    // Reset state
-                    LastMarkerPoint = null;
-                    _cutModel.Segments.Clear();
-                    _cutModel.Markers.Clear();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[Cut] Image load error: {ex.Message}");
-                }
+            try
+            {
+                DisplayedImage = _imageService.LoadImage(selectedPath);
+                _loadedImageBaseName = Path.GetFileNameWithoutExtension(selectedPath);
+                ResetState();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Cut] Image load error: {ex.Message}");
             }
         }
 
@@ -175,141 +148,241 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 
             string baseName = string.IsNullOrEmpty(_loadedImageBaseName) ? "Image" : _loadedImageBaseName;
 
-            // --- Single Segment (ROI) ---
             if (Segments.Count == 1)
             {
-                var rect = Segments[0].BoundingBox;
-                string suffix = $"ROI_{_roiSaveCount}";
-                var exporter = new SingleFileExporter(".tif", suffix);
-                string exportPath = exporter.GetExportPath(baseName);
-
-                if (!string.IsNullOrEmpty(exportPath))
-                {
-                    try
-                    {
-                        _imageService.SaveRoi(DisplayedImage, rect, exportPath);
-                        _roiSaveCount++;
-                        _lastSavedFolder = Path.GetDirectoryName(exportPath);
-
-                        Clipboard.SetText(_lastSavedFolder);
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            var toast = new ToastWindow
-                            {
-                                ToastMessage = "Save path copied to clipboard!",
-                            };
-                            toast.ShowToast();
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Failed to save ROI: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
+                SaveSingleSegment(baseName);
             }
-
-            // --- Multiple Segments ---
             else if (Segments.Count > 1)
             {
-                var exporter = new FolderExporter("segments");
-                string exportFolder = exporter.GetExportPath(baseName);
-
-                if (string.IsNullOrEmpty(exportFolder))
-                    return;
-
-                for (int i = 0; i < Segments.Count; i++)
-                {
-                    var rect = Segments[i].BoundingBox;
-                    string savePath = Path.Combine(exportFolder, $"{baseName}_segment_{i + 1}.tif");
-
-                    try
-                    {
-                        _imageService.SaveRoi(DisplayedImage, rect, savePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error saving segment {i + 1}: {ex.Message}");
-                    }
-                }
-
-                try
-                {
-                    Clipboard.SetText(exportFolder);
-
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        var toast = new ToastWindow
-                        {
-                            ToastMessage = "Save path copied to clipboard!"
-                        };
-                        toast.ShowToast();
-                    });
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Failed to copy to clipboard: {ex.Message}");
-                }
+                SaveMultipleSegments(baseName);
             }
         }
 
         private void RemoveLastMarker()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            if (_cutModel.Markers.Count > 0)
             {
-                if (_cutModel.Markers.Count > 0)
-                {
-                    _cutModel.Markers.RemoveAt(_cutModel.Markers.Count - 1);
-                }
+                _cutModel.Markers.RemoveAt(_cutModel.Markers.Count - 1);
+            }
 
-                if (_cutModel.Segments.Count > 0)
-                {
-                    _cutModel.Segments.RemoveAt(_cutModel.Segments.Count - 1);
-                }
+            if (_cutModel.Segments.Count > 0)
+            {
+                _cutModel.Segments.RemoveAt(_cutModel.Segments.Count - 1);
+            }
 
-                if (_cutModel.Markers.Count > 0)
-                    LastMarkerPoint = _cutModel.Markers.Last().Position;
-                else
-                    LastMarkerPoint = null;
-            });
+            LastMarkerPoint = _cutModel.Markers.Count > 0 ? _cutModel.Markers.Last().Position : (Point?)null;
         }
 
-
-        public void AddMarker(Point uiPoint)
+        private void ClearMarkers()
         {
-            if (DisplayedImage == null) return;
+            LastMarkerPoint = null;
+            _cutModel.Segments.Clear();
+            _cutModel.Markers.Clear();
+        }
 
-            const double epsilon = 0.1;
-            if (_cutModel.Markers.Any(m => Math.Abs(m.Position.X - uiPoint.X) < epsilon && Math.Abs(m.Position.Y - uiPoint.Y) < epsilon))
+        #endregion
+
+        #region Helpers
+
+        private void ResetState()
+        {
+            LastMarkerPoint = null;
+            _cutModel.Segments.Clear();
+            _cutModel.Markers.Clear();
+            _roiSaveCount = 0;
+            _lastSavedFolder = null;
+        }
+
+        private void SaveSingleSegment(string baseName)
+        {
+            var rect = Segments[0].BoundingBox;
+            string suffix = $"ROI_{_roiSaveCount}";
+            var exporter = new SingleFileExporter(".tif", suffix);
+            string exportPath = exporter.GetExportPath(baseName);
+
+            if (string.IsNullOrEmpty(exportPath))
                 return;
 
-            LastMarkerPoint = uiPoint;
-
-            var result = _segmentationEngine.SegmentRegion(DisplayedImage, uiPoint, _toleranceValue);
-
-            if (result != null && !result.BoundingBox.IsEmpty)
+            try
             {
-                var originalBox = result.BoundingBox;
-                var marginFactor = SliderMarginHelper.GetMarginFactor(_marginValue);
-
-                var inflatedBox = _segmentationEngine.InflateAndClampRect(
-                    originalBox, marginFactor, DisplayedImage.PixelWidth, DisplayedImage.PixelHeight);
-
-                if (!_cutModel.Segments.Any(s => s.BoundingBox == inflatedBox))
-                {
-                    _cutModel.Segments.Add(new Segment(inflatedBox));
-                }
-
-                _cutModel.Markers.Add(new Marker(uiPoint));
+                _imageService.SaveRoi(DisplayedImage, rect, exportPath);
+                _roiSaveCount++;
+                _lastSavedFolder = Path.GetDirectoryName(exportPath);
+                CopyPathToClipboardWithToast(_lastSavedFolder);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save ROI: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void SaveMultipleSegments(string baseName)
+        {
+            var exporter = new FolderExporter("segments");
+            string exportFolder = exporter.GetExportPath(baseName);
+
+            if (string.IsNullOrEmpty(exportFolder))
+                return;
+
+            for (int i = 0; i < Segments.Count; i++)
+            {
+                var rect = Segments[i].BoundingBox;
+                string savePath = Path.Combine(exportFolder, $"{baseName}_segment_{i + 1}.tif");
+
+                try
+                {
+                    _imageService.SaveRoi(DisplayedImage, rect, savePath);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error saving segment {i + 1}: {ex.Message}");
+                }
+            }
+
+            CopyPathToClipboardWithToast(exportFolder);
+        }
+
+        private void CopyPathToClipboardWithToast(string path)
+        {
+            try
+            {
+                Clipboard.SetText(path);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var toast = new ToastWindow { ToastMessage = "Save path copied to clipboard!" };
+                    toast.ShowToast();
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to copy to clipboard: {ex.Message}");
+            }
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        public void AddMarker(Point uiPoint, System.Windows.Controls.Image imageControl)
+        {
+            if (DisplayedImage == null)
+            {
+                Debug.WriteLine("[AddMarker] DisplayedImage is null, aborting.");
+                return;
+            }
+
+            if (imageControl == null)
+            {
+                Debug.WriteLine("[AddMarker] imageControl is null, aborting.");
+                return;
+            }
+
+            Debug.WriteLine($"[AddMarker] UI Point: {uiPoint}");
+
+            // Map uiPoint from control coordinates to image pixel coordinates
+            var pixelPoint = ConvertToImagePixelCoordinates(uiPoint, imageControl, DisplayedImage);
+
+            Debug.WriteLine($"[AddMarker] Converted to pixel coordinates: {pixelPoint}");
+
+            const double epsilon = 0.1;
+            bool duplicateMarker = _cutModel.Markers.Any(m =>
+                Math.Abs(m.Position.X - pixelPoint.X) < epsilon &&
+                Math.Abs(m.Position.Y - pixelPoint.Y) < epsilon);
+
+            if (duplicateMarker)
+            {
+                Debug.WriteLine("[AddMarker] Marker too close to existing one, skipping.");
+                return;
+            }
+
+            LastMarkerPoint = pixelPoint;
+            Debug.WriteLine($"[AddMarker] LastMarkerPoint set to: {LastMarkerPoint}");
+
+            var result = _segmentationEngine.SegmentRegion(DisplayedImage, pixelPoint, _toleranceValue);
+
+            if (result == null)
+            {
+                Debug.WriteLine("[AddMarker] Segmentation result is null, aborting.");
+                return;
+            }
+
+            if (result.BoundingBox.IsEmpty)
+            {
+                Debug.WriteLine("[AddMarker] Result bounding box is empty, aborting.");
+                return;
+            }
+
+            Debug.WriteLine($"[AddMarker] Segmentation bounding box: {result.BoundingBox}");
+
+            var marginFactor = SliderMarginHelper.GetMarginFactor(_marginValue);
+            Debug.WriteLine($"[AddMarker] Margin factor: {marginFactor}");
+
+            var inflatedBox = _segmentationEngine.InflateAndClampRect(
+                result.BoundingBox, marginFactor, DisplayedImage.PixelWidth, DisplayedImage.PixelHeight);
+
+            Debug.WriteLine($"[AddMarker] Inflated bounding box: {inflatedBox}");
+
+            // Reverse transform inflatedBox from pixel coordinates to UI coordinates
+            var scaleX = DisplayedImage.PixelWidth / imageControl.ActualWidth;
+            var scaleY = DisplayedImage.PixelHeight / imageControl.ActualHeight;
+
+            var uiRect = new Rect(
+                inflatedBox.X / scaleX,
+                inflatedBox.Y / scaleY,
+                inflatedBox.Width / scaleX,
+                inflatedBox.Height / scaleY);
+
+            bool segmentExists = _cutModel.Segments.Any(s => s.BoundingBox == uiRect);
+
+            if (!segmentExists)
+            {
+                _cutModel.Segments.Add(new Segment(uiRect));
+                Debug.WriteLine("[AddMarker] Added new segment (UI coordinates).");
+            }
+            var uiMarkerPoint = new Point(pixelPoint.X / scaleX, pixelPoint.Y / scaleY);
+
+            _cutModel.Markers.Add(new Marker(uiMarkerPoint));
+            Debug.WriteLine("[AddMarker] Added new marker.");
+        }
+
+        // Helper method to map UI point to image pixel coordinates
+        private Point ConvertToImagePixelCoordinates(Point uiPoint, System.Windows.Controls.Image imageControl, BitmapImage bitmapImage)
+        {
+            var controlWidth = imageControl.ActualWidth;
+            var controlHeight = imageControl.ActualHeight;
+
+            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Control size: {controlWidth} x {controlHeight}");
+
+            var imagePixelWidth = bitmapImage.PixelWidth;
+            var imagePixelHeight = bitmapImage.PixelHeight;
+
+            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Image pixel size: {imagePixelWidth} x {imagePixelHeight}");
+
+            double scaleX = imagePixelWidth / controlWidth;
+            double scaleY = imagePixelHeight / controlHeight;
+
+            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Scale factors - X: {scaleX}, Y: {scaleY}");
+
+            double pixelX = uiPoint.X * scaleX;
+            double pixelY = uiPoint.Y * scaleY;
+
+            // Clamp coordinates to image bounds
+            pixelX = Math.Max(0, Math.Min(pixelX, imagePixelWidth - 1));
+            pixelY = Math.Max(0, Math.Min(pixelY, imagePixelHeight - 1));
+
+            Debug.WriteLine($"[ConvertToImagePixelCoordinates] Mapped and clamped pixel point: ({pixelX}, {pixelY})");
+
+            return new Point(pixelX, pixelY);
+        }
+
 
 
         public void AddSegmentBox(Rect rect)
         {
             if (_cutModel.Segments.All(s => s.BoundingBox != rect))
-            {
                 _cutModel.Segments.Add(new Segment(rect));
-            }
         }
+
+        #endregion
     }
 }
