@@ -20,15 +20,14 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
     {
         public ObservableCollection<CalibrationImageEntry> CalibrationFileNamesView { get; } = new ObservableCollection<CalibrationImageEntry>();
 
-        private CalibrationImageEntry _selectedCalibrationFile;
+        private CalibrationImageEntry _selectedTifImage;
         public CalibrationImageEntry SelectedCalibrationFile
         {
-            get { return _selectedCalibrationFile; }
+            get { return _selectedTifImage; }
             set
             {
-                if (SetProperty(ref _selectedCalibrationFile, value))
+                if (SetProperty(ref _selectedTifImage, value))
                 {
-                    DisplayedCalibrationImage = CalibrationModel.LoadImage(value != null ? value.FullPath : null);
                 }
             }
         }
@@ -67,7 +66,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             ImportCommand = new RelayCommand(param => Import());
             SaveCommand = new RelayCommand(param => Save(), param => DisplayedCalibrationImage != null);
             RemoveCommand = new RelayCommand(param => RemoveSelected(), param => SelectedCalibrationFile != null);
-            ProcessCommand = new RelayCommand(param => Process(), param => DisplayedCalibrationImage != null);
+            ProcessCommand = new RelayCommand(param => Process(), param => SelectedCalibrationFile != null);
         }
 
         private async void Import()
@@ -159,7 +158,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
             var normalizedEntries = entries.Select(s => s.Replace(',', '.')).ToList();
 
-            var values = new List<double>();
+            var doseValues = new List<double>();
             foreach (var entry in normalizedEntries)
             {
                 if (!double.TryParse(entry, System.Globalization.NumberStyles.Any,
@@ -168,17 +167,63 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                     ShowToast($"Invalid number: '{entry}' (use '.' or ',' as decimal)");
                     return;
                 }
-                values.Add(val);
+
+                // Convert to Gy based on SelectedUnit
+                switch (SelectedUnit)
+                {
+                    case "Gy":
+                        // no conversion needed
+                        break;
+                    case "cGy":
+                        val = val / 100.0;  // centi-Gray to Gray
+                        break;
+                    case "mGy":
+                        val = val / 1000.0; // milli-Gray to Gray
+                        break;
+                    default:
+                        ShowToast($"Unknown dose unit: '{SelectedUnit}'");
+                        return;
+                }
+
+                doseValues.Add(val);
             }
 
-            if (!values.Any(v => Math.Abs(v) < 1e-9))
+            if (!doseValues.Any(v => Math.Abs(v) < 1e-9))
             {
                 ShowToast("One calibration value must be zero (e.g., 0, 0.0)");
                 return;
             }
 
-            ShowToast($"Calibration processed for {values.Count} files");
+            // Get image paths
+            var imagePaths = CalibrationFileNamesView.Select(e => e.FullPath).ToList();
+
+            // Analyze brightness
+            var brightnessAnalysis = CalibrationModel.AnalyzeImageBrightness(imagePaths);
+            var brightestImagePath = brightnessAnalysis.BrightestImagePath;
+
+            foreach (var warning in brightnessAnalysis.Warnings)
+            {
+                ShowToast(warning, 5);  // or collect and show all at once
+            }
+
+            // Compute OD values using brightest image as reference
+            ShowToast("Calculating...", 2);
+            var odValues = CalibrationModel.CalculateOpticalDensities(imagePaths, brightestImagePath);
+            
+
+            // Generate OD vs Dose plot
+            // Sort doseValues ascending independently
+            var sortedDoseValues = doseValues.OrderBy(x => x).ToList();
+            var sortedOdValues = odValues.OrderBy(x => x).ToList();
+            var graphImage = CalibrationModel.GenerateOdDosePlot(sortedDoseValues, sortedOdValues);
+
+            // Show result
+            DisplayedCalibrationImage = graphImage;
+
+            //ShowToast($"Calibration processed for {doseValues.Count} files");
         }
+
+
 
         private void ShowToast(string message, int duration = 3)
         {
