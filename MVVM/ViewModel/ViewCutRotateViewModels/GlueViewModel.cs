@@ -1,8 +1,11 @@
 ﻿using Filmauswertung_ModernUI.Core;
+using Filmauswertung_ModernUI.MVVM.Model;
+using Filmauswertung_ModernUI.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows.Data;
 using System.Windows.Input;
@@ -12,14 +15,17 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
     internal class GlueViewModel : ObservableObject
     {
-        private ObservableCollection<string> _imageFileNames = new ObservableCollection<string>();
-        public ObservableCollection<string> ImageFileNames
+        // 1) Now holds ImageItem, not string
+        private ObservableCollection<ImageItem> _imageFileNames = new ObservableCollection<ImageItem>();
+        public ObservableCollection<ImageItem> ImageFileNames
         {
             get => _imageFileNames;
             set
             {
                 _imageFileNames = value;
                 OnPropertyChanged(nameof(ImageFileNames));
+                OnPropertyChanged(nameof(ColumnMax));
+                OnPropertyChanged(nameof(RowMax));
                 ImageFileNamesView = CollectionViewSource.GetDefaultView(_imageFileNames);
             }
         }
@@ -35,28 +41,27 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             }
         }
 
-        private string _selectedImage;
-        public string SelectedImage
+        private ImageItem _selectedImage;
+        public ImageItem SelectedImage
         {
             get => _selectedImage;
             set
             {
                 _selectedImage = value;
                 OnPropertyChanged(nameof(SelectedImage));
-                LoadImage(value);
+                LoadImage(value?.FullPath);
                 RaiseCommandStates();
+                OnPropertyChanged(nameof(ColumnMax));
+                OnPropertyChanged(nameof(RowMax));
+
             }
         }
 
-        private ImageSource _displayedImage;
-        public ImageSource DisplayedImage
+        private DrawingImage _displayedImage;
+        public DrawingImage DisplayedImage
         {
             get => _displayedImage;
-            set
-            {
-                _displayedImage = value;
-                OnPropertyChanged(nameof(DisplayedImage));
-            }
+            set => SetProperty(ref _displayedImage, value);
         }
 
         private int _columns = 1;
@@ -65,8 +70,23 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             get => _columns;
             set
             {
-                _columns = value;
-                OnPropertyChanged(nameof(Columns));
+                if (_columns != value)
+                {
+                    _columns = value;
+                    OnPropertyChanged(nameof(Columns));
+                    OnPropertyChanged(nameof(RowMax));
+
+                    // Clamp Rows to new RowMax if necessary
+                    if (Rows > RowMax)
+                    {
+                        Rows = RowMax;
+                    }
+                    else
+                    {
+                        // Update image grid when Columns changes but Rows is fine
+                        UpdateDisplayedImageGrid();
+                    }
+                }
             }
         }
 
@@ -76,18 +96,37 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             get => _rows;
             set
             {
-                _rows = value;
-                OnPropertyChanged(nameof(Rows));
+                if (SetProperty(ref _rows, value))
+                {
+                    UpdateDisplayedImageGrid();
+                }
+            }
+        }
+        public int ColumnMax => ImageFileNames.Count;
+
+        public int RowMax
+        {
+            get
+            {
+                if (Columns <= 0) return 1;
+                return (int)Math.Ceiling((double)ImageFileNames.Count / Columns);
             }
         }
 
         public int ToleranceMax => 10; // Used by sliders
 
-        public ICommand ImportCommand { get; }
-        public ICommand SaveCommand { get; }
-        public ICommand MoveUpCommand { get; }
-        public ICommand MoveDownCommand { get; }
-        public ICommand RemoveCommand { get; }
+        // Commands
+        public RelayCommand ImportCommand { get; }
+        public RelayCommand SaveCommand { get; }
+        public RelayCommand MoveUpCommand { get; }
+        public RelayCommand MoveDownCommand { get; }
+        public RelayCommand RemoveCommand { get; }
+
+        // Services
+        private readonly ImageService _imageService
+            = new ImageService();
+        private readonly Importer _importer
+            = new MultipleFilesImporter(new[] { ".tif" });
 
         public GlueViewModel()
         {
@@ -97,67 +136,27 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             MoveDownCommand = new RelayCommand(_ => MoveDown(), _ => SelectedImage != null);
             RemoveCommand = new RelayCommand(_ => Remove(), _ => SelectedImage != null);
 
-            ImageFileNames = new ObservableCollection<string>();
+            // initialize collection & view
+            ImageFileNames = new ObservableCollection<ImageItem>();
             ImageFileNamesView = CollectionViewSource.GetDefaultView(ImageFileNames);
         }
 
-        private void ImportImages()
+        private async void ImportImages()
         {
+            var selectedPath = ImportDialogService.ShowDialog(_importer);
+            if (string.IsNullOrWhiteSpace(selectedPath)) return;
+
+            var paths = await _importer.ImportAsync(selectedPath);
+
             ImageFileNames.Clear();
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
-            ImageFileNames.Add("Zebra.tif");
-            ImageFileNames.Add("Apple.tif");
-            ImageFileNames.Add("Monkey.tif");
+            foreach (var path in paths)
+            {
+                ImageFileNames.Add(new ImageItem
+                {
+                    FullPath = path,
+                    FileNameWithoutExtension = Path.GetFileNameWithoutExtension(path)
+                });
+            }
 
             SelectedImage = ImageFileNames.FirstOrDefault();
         }
@@ -165,54 +164,64 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         private void SaveImage()
         {
             Debug.WriteLine("SaveCommand executed.");
+            // TODO: call _imageService.SaveImage or SaveRoi here
         }
 
-        private void LoadImage(string fileName)
+        private void LoadImage(string path)
         {
-            Debug.WriteLine($"Dummy Load Image for {fileName}");
-            // Placeholder image logic
+            if (string.IsNullOrWhiteSpace(path)) return;
+            try
+            {
+                UpdateDisplayedImageGrid();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to load image: {ex.Message}");
+            }
         }
-
+        private void UpdateDisplayedImageGrid()
+        {
+            try
+            {
+                DisplayedImage = _imageService.CreateImageGrid(
+                    ImageFileNames.Select(img => img.FullPath),
+                    Columns
+                );
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to update displayed image grid: {ex.Message}");
+            }
+        }
         private void MoveUp()
         {
             if (SelectedImage == null) return;
-
-            int index = ImageFileNames.IndexOf(SelectedImage);
-            if (index > 0)
-            {
-                ImageFileNames.Move(index, index - 1);
-            }
+            var idx = ImageFileNames.IndexOf(SelectedImage);
+            if (idx > 0) ImageFileNames.Move(idx, idx - 1);
         }
 
         private void MoveDown()
         {
             if (SelectedImage == null) return;
-
-            int index = ImageFileNames.IndexOf(SelectedImage);
-            if (index < ImageFileNames.Count - 1)
-            {
-                ImageFileNames.Move(index, index + 1);
-            }
+            var idx = ImageFileNames.IndexOf(SelectedImage);
+            if (idx < ImageFileNames.Count - 1) ImageFileNames.Move(idx, idx + 1);
         }
 
         private void Remove()
         {
             if (SelectedImage == null) return;
-
-            int index = ImageFileNames.IndexOf(SelectedImage);
+            var idx = ImageFileNames.IndexOf(SelectedImage);
             ImageFileNames.Remove(SelectedImage);
-
-            if (ImageFileNames.Count > 0)
-                SelectedImage = ImageFileNames[Math.Min(index, ImageFileNames.Count - 1)];
-            else
-                SelectedImage = null;
+            SelectedImage = ImageFileNames.Count > 0
+                ? ImageFileNames[Math.Min(idx, ImageFileNames.Count - 1)]
+                : null;
         }
 
         private void RaiseCommandStates()
         {
-            (MoveUpCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (MoveDownCommand as RelayCommand)?.RaiseCanExecuteChanged();
-            (RemoveCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            MoveUpCommand.RaiseCanExecuteChanged();
+            MoveDownCommand.RaiseCanExecuteChanged();
+            RemoveCommand.RaiseCanExecuteChanged();
         }
     }
 }

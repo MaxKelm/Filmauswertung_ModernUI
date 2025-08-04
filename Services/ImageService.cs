@@ -1,6 +1,7 @@
 ﻿using Filmauswertung_ModernUI.Core.Interfaces;
 using Filmauswertung_ModernUI.MVVM.Model;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -20,7 +21,7 @@ namespace Filmauswertung_ModernUI.Services
             image.UriSource = new Uri(path, UriKind.Absolute);
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.EndInit();
-            image.Freeze(); // Safe for cross-thread access
+            image.Freeze();
 
             return image;
         }
@@ -47,6 +48,7 @@ namespace Filmauswertung_ModernUI.Services
                 encoder.Save(fileStream);
             }
         }
+
         public void SaveImage(BitmapSource image, string savePath)
         {
             if (image == null)
@@ -61,8 +63,6 @@ namespace Filmauswertung_ModernUI.Services
             }
         }
 
-
-        // New method to save cropped pixels from segmentation
         public void SaveSegmentCroppedImage(SegmentResult segment, string savePath)
         {
             if (segment == null || segment.CroppedPixelData == null)
@@ -70,12 +70,12 @@ namespace Filmauswertung_ModernUI.Services
 
             int width = segment.CropWidth;
             int height = segment.CropHeight;
-            int stride = width * 4; // Bgra32
+            int stride = width * 4;
 
             var bitmap = BitmapSource.Create(
                 width,
                 height,
-                96, 96, // dpiX, dpiY
+                96, 96,
                 PixelFormats.Bgra32,
                 null,
                 segment.CroppedPixelData,
@@ -90,7 +90,6 @@ namespace Filmauswertung_ModernUI.Services
             }
         }
 
-        // Converts a BitmapSource (e.g. TransformedBitmap) into a BitmapImage
         public BitmapImage ConvertToBitmapImage(BitmapSource source)
         {
             if (source == null)
@@ -103,14 +102,49 @@ namespace Filmauswertung_ModernUI.Services
                 encoder.Save(ms);
                 ms.Seek(0, SeekOrigin.Begin);
 
-                BitmapImage bmp = new BitmapImage();
+                var bmp = new BitmapImage();
                 bmp.BeginInit();
                 bmp.CacheOption = BitmapCacheOption.OnLoad;
                 bmp.StreamSource = ms;
                 bmp.EndInit();
-                bmp.Freeze(); // Freeze for thread safety
+                bmp.Freeze();
                 return bmp;
             }
+        }
+
+        /// <summary>
+        /// Composes a grid of images from file paths.
+        /// </summary>
+        /// <param name="imagePaths">List of full image paths.</param>
+        /// <param name="columns">Number of columns in the grid.</param>
+        /// <param name="cellWidth">Width of each image cell.</param>
+        /// <param name="cellHeight">Height of each image cell.</param>
+        /// <returns>A DrawingImage composed as a grid.</returns>
+        public DrawingImage CreateImageGrid(IEnumerable<string> imagePaths, int columns, int cellWidth = 200, int cellHeight = 200)
+        {
+            if (imagePaths == null)
+                throw new ArgumentNullException(nameof(imagePaths));
+            if (columns <= 0)
+                throw new ArgumentException("Columns must be greater than zero.");
+
+            var group = new DrawingGroup();
+            var paths = new List<string>(imagePaths);
+
+            for (int i = 0; i < paths.Count; i++)
+            {
+                int col = i % columns;
+                int row = i / columns;
+
+                var imageSource = LoadImage(paths[i]);
+                if (imageSource != null)
+                {
+                    var rect = new Rect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
+                    var drawing = new ImageDrawing(imageSource, rect);
+                    group.Children.Add(drawing);
+                }
+            }
+
+            return new DrawingImage(group);
         }
     }
 }

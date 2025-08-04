@@ -93,6 +93,7 @@
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
     <Compile Include="MVVM\Model\CutModel.cs" />
+    <Compile Include="MVVM\Model\GlueModel.cs" />
     <Compile Include="MVVM\Model\SegmentationEngine.cs" />
     <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\GlueViewModel.cs" />
     <Compile Include="MVVM\View\ToastWindow.xaml.cs">
