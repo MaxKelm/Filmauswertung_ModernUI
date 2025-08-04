@@ -10,6 +10,9 @@ using System.Linq;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows;
+using Filmauswertung_ModernUI.MVVM.View;  
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
 {
@@ -25,7 +28,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 _imageFileNames = value;
                 OnPropertyChanged(nameof(ImageFileNames));
                 OnPropertyChanged(nameof(ColumnMax));
-                OnPropertyChanged(nameof(RowMax));
                 ImageFileNamesView = CollectionViewSource.GetDefaultView(_imageFileNames);
             }
         }
@@ -52,7 +54,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 LoadImage(value?.FullPath);
                 RaiseCommandStates();
                 OnPropertyChanged(nameof(ColumnMax));
-                OnPropertyChanged(nameof(RowMax));
 
             }
         }
@@ -74,44 +75,12 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 {
                     _columns = value;
                     OnPropertyChanged(nameof(Columns));
-                    OnPropertyChanged(nameof(RowMax));
-
-                    // Clamp Rows to new RowMax if necessary
-                    if (Rows > RowMax)
-                    {
-                        Rows = RowMax;
-                    }
-                    else
-                    {
-                        // Update image grid when Columns changes but Rows is fine
-                        UpdateDisplayedImageGrid();
-                    }
-                }
-            }
-        }
-
-        private int _rows = 1;
-        public int Rows
-        {
-            get => _rows;
-            set
-            {
-                if (SetProperty(ref _rows, value))
-                {
                     UpdateDisplayedImageGrid();
                 }
             }
         }
-        public int ColumnMax => ImageFileNames.Count;
 
-        public int RowMax
-        {
-            get
-            {
-                if (Columns <= 0) return 1;
-                return (int)Math.Ceiling((double)ImageFileNames.Count / Columns);
-            }
-        }
+        public int ColumnMax => ImageFileNames.Count;
 
         public int ToleranceMax => 10; // Used by sliders
 
@@ -164,8 +133,38 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
         private void SaveImage()
         {
             Debug.WriteLine("SaveCommand executed.");
-            // TODO: call _imageService.SaveImage or SaveRoi here
+
+            if (!(DisplayedImage is DrawingImage drawingImage))
+            {
+                Debug.WriteLine("No valid image to save.");
+                return;
+            }
+
+            var baseName = GetBaseFolderName();
+            var exporter = new SingleFileExporter(".tif", "glued");
+            var exportPath = exporter.GetExportPath(baseName);
+
+            if (string.IsNullOrWhiteSpace(exportPath))
+            {
+                Debug.WriteLine("Save cancelled.");
+                return;
+            }
+
+            try
+            {
+                var bitmapSource = _imageService.RenderDrawingImageToBitmapSource(drawingImage);
+                _imageService.SaveImage(bitmapSource, exportPath);
+                var folderPath = Path.GetDirectoryName(exportPath);
+                CopyPathToClipboardWithToast(folderPath);
+                Debug.WriteLine($"Image saved to {exportPath}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to save image: {ex.Message}");
+            }
         }
+
+
 
         private void LoadImage(string path)
         {
@@ -193,11 +192,13 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
                 Debug.WriteLine($"Failed to update displayed image grid: {ex.Message}");
             }
         }
+
         private void MoveUp()
         {
             if (SelectedImage == null) return;
             var idx = ImageFileNames.IndexOf(SelectedImage);
             if (idx > 0) ImageFileNames.Move(idx, idx - 1);
+            UpdateDisplayedImageGrid();
         }
 
         private void MoveDown()
@@ -205,6 +206,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             if (SelectedImage == null) return;
             var idx = ImageFileNames.IndexOf(SelectedImage);
             if (idx < ImageFileNames.Count - 1) ImageFileNames.Move(idx, idx + 1);
+            UpdateDisplayedImageGrid();
         }
 
         private void Remove()
@@ -215,6 +217,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             SelectedImage = ImageFileNames.Count > 0
                 ? ImageFileNames[Math.Min(idx, ImageFileNames.Count - 1)]
                 : null;
+            UpdateDisplayedImageGrid();
         }
 
         private void RaiseCommandStates()
@@ -223,5 +226,33 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels
             MoveDownCommand.RaiseCanExecuteChanged();
             RemoveCommand.RaiseCanExecuteChanged();
         }
+        #region Helper Methods
+        private string GetBaseFolderName()
+        {
+            var firstPath = ImageFileNames.FirstOrDefault()?.FullPath;
+            if (string.IsNullOrEmpty(firstPath))
+                return "glued";
+
+            var folderName = Path.GetFileName(Path.GetDirectoryName(firstPath));
+            return string.IsNullOrEmpty(folderName) ? "glued" : folderName;
+        }
+
+        private void CopyPathToClipboardWithToast(string path)
+        {
+            try
+            {
+                Clipboard.SetText(path);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    var toast = new ToastWindow { ToastMessage = "Save path copied to clipboard!" };
+                    toast.ShowToast();
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to copy to clipboard: {ex.Message}");
+            }
+        }
+        #endregion
     }
 }

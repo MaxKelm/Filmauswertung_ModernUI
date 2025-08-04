@@ -20,6 +20,8 @@
                 <ResourceDictionary Source="Theme/ToggleSwitchTheme.xaml" />
                 <ResourceDictionary Source="/Theme/DynamicListView.xaml" />
                 <ResourceDictionary Source="Theme/ScrollBar.xaml" />
+                <ResourceDictionary Source="Theme/DynamicComboBox.xaml" />
+                <ResourceDictionary Source="Theme/DynamicTextBox.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">

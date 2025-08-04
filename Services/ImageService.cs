@@ -3,6 +3,7 @@ using Filmauswertung_ModernUI.MVVM.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -111,6 +112,25 @@ namespace Filmauswertung_ModernUI.Services
                 return bmp;
             }
         }
+        public BitmapSource RenderDrawingImageToBitmapSource(DrawingImage drawingImage, double dpiX = 96, double dpiY = 96)
+        {
+            if (drawingImage == null || drawingImage.Drawing == null)
+                throw new ArgumentException("Invalid DrawingImage.");
+
+            var bounds = drawingImage.Drawing.Bounds;
+            var renderTarget = new RenderTargetBitmap(
+                (int)bounds.Width, (int)bounds.Height, dpiX, dpiY, PixelFormats.Pbgra32);
+
+            var visual = new DrawingVisual();
+            using (var dc = visual.RenderOpen())
+            {
+                dc.DrawDrawing(drawingImage.Drawing);
+            }
+            renderTarget.Render(visual);
+
+            return renderTarget;
+        }
+
 
         /// <summary>
         /// Composes a grid of images from file paths.
@@ -120,31 +140,67 @@ namespace Filmauswertung_ModernUI.Services
         /// <param name="cellWidth">Width of each image cell.</param>
         /// <param name="cellHeight">Height of each image cell.</param>
         /// <returns>A DrawingImage composed as a grid.</returns>
-        public DrawingImage CreateImageGrid(IEnumerable<string> imagePaths, int columns, int cellWidth = 200, int cellHeight = 200)
+        public DrawingImage CreateImageGrid(IEnumerable<string> imagePaths, int columns)
         {
             if (imagePaths == null)
                 throw new ArgumentNullException(nameof(imagePaths));
             if (columns <= 0)
                 throw new ArgumentException("Columns must be greater than zero.");
 
-            var group = new DrawingGroup();
-            var paths = new List<string>(imagePaths);
+            var paths = imagePaths.ToList();
+            int imageCount = paths.Count;
+            int rows = (int)Math.Ceiling((double)imageCount / columns);
 
-            for (int i = 0; i < paths.Count; i++)
+            // First pass: determine max width and height
+            double maxWidth = 0;
+            double maxHeight = 0;
+            var imageSources = new List<BitmapSource>();
+
+            foreach (var path in paths)
             {
+                var image = LoadImage(path);
+                if (image != null)
+                {
+                    imageSources.Add(image);
+                    maxWidth = Math.Max(maxWidth, image.PixelWidth);
+                    maxHeight = Math.Max(maxHeight, image.PixelHeight);
+                }
+            }
+
+            var group = new DrawingGroup();
+
+            for (int i = 0; i < imageSources.Count; i++)
+            {
+                var imageSource = imageSources[i];
                 int col = i % columns;
                 int row = i / columns;
 
-                var imageSource = LoadImage(paths[i]);
-                if (imageSource != null)
+                double imgAspect = imageSource.Width / imageSource.Height;
+                double cellAspect = maxWidth / maxHeight;
+
+                double drawWidth, drawHeight;
+
+                if (imgAspect > cellAspect)
                 {
-                    var rect = new Rect(col * cellWidth, row * cellHeight, cellWidth, cellHeight);
-                    var drawing = new ImageDrawing(imageSource, rect);
-                    group.Children.Add(drawing);
+                    drawWidth = maxWidth;
+                    drawHeight = maxWidth / imgAspect;
                 }
+                else
+                {
+                    drawHeight = maxHeight;
+                    drawWidth = maxHeight * imgAspect;
+                }
+
+                double offsetX = col * maxWidth + (maxWidth - drawWidth) / 2;
+                double offsetY = row * maxHeight + (maxHeight - drawHeight) / 2;
+
+                var rect = new Rect(offsetX, offsetY, drawWidth, drawHeight);
+                var drawing = new ImageDrawing(imageSource, rect);
+                group.Children.Add(drawing);
             }
 
             return new DrawingImage(group);
         }
+
     }
 }

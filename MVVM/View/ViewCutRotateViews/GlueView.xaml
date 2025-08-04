@@ -146,7 +146,6 @@
             <Grid Grid.Column="1" Margin="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
@@ -163,22 +162,6 @@
                         Style="{StaticResource DynamicSlider}"
                         TickFrequency="1"
                         Value="{Binding Columns, Mode=TwoWay}" />
-                </StackPanel>
-
-                <StackPanel Grid.Column="1">
-                    <TextBlock
-                        HorizontalAlignment="Center"
-                        Foreground="White"
-                        Text="Rows" />
-                    <Slider
-                        Width="200"
-                        extensions:Extensions.DisplayValue="{Binding Rows}"
-                        IsSnapToTickEnabled="True"
-                        Maximum="{Binding RowMax}"
-                        Minimum="1"
-                        Style="{StaticResource DynamicSlider}"
-                        TickFrequency="1"
-                        Value="{Binding Rows, Mode=TwoWay}" />
                 </StackPanel>
             </Grid>
         </Grid>
