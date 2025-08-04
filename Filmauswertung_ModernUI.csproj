@@ -94,8 +94,12 @@
     <Compile Include="Core\RelayCommand.cs" />
     <Compile Include="MVVM\Model\CutModel.cs" />
     <Compile Include="MVVM\Model\SegmentationEngine.cs" />
+    <Compile Include="MVVM\ViewModel\ViewCutRotateViewModels\GlueViewModel.cs" />
     <Compile Include="MVVM\View\ToastWindow.xaml.cs">
       <DependentUpon>ToastWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MVVM\View\ViewCutRotateViews\GlueView.xaml.cs">
+      <DependentUpon>GlueView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Services\Exporter.cs" />
     <Compile Include="Services\ImageProcessingService.cs" />
@@ -132,7 +136,15 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="MVVM\View\ViewCutRotateViews\GlueView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MVVM\View\ViewCutRotateViews\RotateView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Theme\DynamicListView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -145,6 +157,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Theme\MenuButtonTheme.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Theme\ScrollBar.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

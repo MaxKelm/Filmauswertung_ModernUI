@@ -18,6 +18,8 @@
                 <ResourceDictionary Source="Theme/GenericButton.xaml" />
                 <ResourceDictionary Source="Theme/DynamicSlider.xaml" />
                 <ResourceDictionary Source="Theme/ToggleSwitchTheme.xaml" />
+                <ResourceDictionary Source="/Theme/DynamicListView.xaml" />
+                <ResourceDictionary Source="Theme/ScrollBar.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
@@ -37,6 +39,9 @@
             </DataTemplate>
             <DataTemplate DataType="{x:Type VCTviewModel:RotateViewModel}">
                 <VCTview:RotateView />
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type VCTviewModel:GlueViewModel}">
+                <VCTview:GlueView />
             </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>

@@ -1,20 +1,16 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace Filmauswertung_ModernUI.Core
 {
-     class RelayCommand : ICommand
+    class RelayCommand : ICommand
     {
-        private Action<object> _execute;
-        private Func<object, bool> _canExecute;
+        private readonly Action<object> _execute;
+        private readonly Func<object, bool> _canExecute;
 
         public event EventHandler CanExecuteChanged
         {
-             add { CommandManager.RequerySuggested += value; }
+            add { CommandManager.RequerySuggested += value; }
             remove { CommandManager.RequerySuggested -= value; }
         }
 
@@ -32,6 +28,11 @@ namespace Filmauswertung_ModernUI.Core
         public void Execute(object parameter)
         {
             _execute(parameter);
+        }
+
+        public void RaiseCanExecuteChanged()
+        {
+            CommandManager.InvalidateRequerySuggested();
         }
     }
 }
