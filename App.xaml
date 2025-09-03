@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:VCTview="clr-namespace:Filmauswertung_ModernUI.MVVM.View.ViewCutRotateViews"
     xmlns:VCTviewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel.ViewCutRotateViewModels"
+    xmlns:converters="clr-namespace:Filmauswertung_ModernUI.Converters"
     xmlns:local="clr-namespace:Filmauswertung_ModernUI"
     xmlns:view="clr-namespace:Filmauswertung_ModernUI.MVVM.View"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
@@ -24,6 +25,7 @@
                 <ResourceDictionary Source="Theme/DynamicTextBox.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!--  DataTemplates  -->
             <DataTemplate DataType="{x:Type viewModel:ViewCutRotateViewModel}">
                 <view:ViewCutRotateView />
             </DataTemplate>
@@ -45,6 +47,11 @@
             <DataTemplate DataType="{x:Type VCTviewModel:GlueViewModel}">
                 <VCTview:GlueView />
             </DataTemplate>
+
+            <!--  Converters  -->
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter" />
         </ResourceDictionary>
     </Application.Resources>
+
 </Application>

@@ -101,7 +101,8 @@
                 Grid.Column="1"
                 Margin="10"
                 Stretch="Uniform"
-                StretchDirection="Both">
+                StretchDirection="Both"
+                Visibility="{Binding DisplayedImage, Converter={StaticResource NullToVisibilityConverter}}">
                 <Image
                     x:Name="PreviewImage"
                     HorizontalAlignment="Center"
@@ -109,6 +110,18 @@
                     Source="{Binding DisplayedImage}"
                     Stretch="None" />
             </Viewbox>
+            <!--  Placeholder message when no image is loaded  -->
+            <TextBlock
+                Grid.Column="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="18"
+                FontStyle="Italic"
+                Foreground="Gray"
+                Text="Load several .tif files to combine as new single .tif image. &#x0a;Use the ListView controls to rearrange the displayed images.&#x0a;Use the 'X' to remove single images and '↑' and '↓' to change the order. &#x0a;Use the column slider to determine the shape of the arrangement.&#x0a;Save as new .tif image."
+                TextAlignment="Center"
+                TextWrapping="Wrap"
+                Visibility="{Binding DisplayedImage, Converter={StaticResource InverseNullToVisibilityConverter}}" />
 
             <!--  Right: Controls  -->
             <StackPanel

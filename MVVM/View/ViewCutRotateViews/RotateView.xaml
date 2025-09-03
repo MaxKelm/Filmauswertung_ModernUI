@@ -26,7 +26,8 @@
         <Viewbox
             Grid.Column="0"
             Stretch="Uniform"
-            StretchDirection="Both">
+            StretchDirection="Both"
+            Visibility="{Binding DisplayedImage, Converter={StaticResource NullToVisibilityConverter}}">
             <Image
                 x:Name="TifImage"
                 HorizontalAlignment="Left"
@@ -34,6 +35,18 @@
                 Source="{Binding DisplayedImage}"
                 Stretch="None" />
         </Viewbox>
+        <!--  Placeholder message when no image is loaded  -->
+        <TextBlock
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            FontSize="18"
+            FontStyle="Italic"
+            Foreground="Gray"
+            Text="Load a single .tif file. &#x0a;Use the controls to rotate or mirror the displayed image. &#x0a;Save as new .tif file."
+            TextAlignment="Center"
+            TextWrapping="Wrap"
+            Visibility="{Binding DisplayedImage, Converter={StaticResource InverseNullToVisibilityConverter}}" />
+
 
         <!--  Right: Controls  -->
         <StackPanel

@@ -15,11 +15,6 @@
     <UserControl.DataContext>
         <viewModel:CalibrationViewModel />
     </UserControl.DataContext>
-    <UserControl.Resources>
-        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
-        <converters:InverseNullToVisibilityConverter x:Key="InverseNullToVisibilityConverter" />
-    </UserControl.Resources>
-
 
     <Grid>
         <Grid.RowDefinitions>
@@ -66,7 +61,6 @@
                 </StackPanel>
             </Grid>
 
-            <!--  Center Panel: Display  -->
             <!--  Center Panel: Display  -->
             <Grid Grid.Column="1" Margin="10">
                 <Viewbox
