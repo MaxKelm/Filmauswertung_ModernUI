@@ -21,6 +21,13 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         public ObservableCollection<CalibrationImageEntry> CalibrationFileNamesView { get; } = new ObservableCollection<CalibrationImageEntry>();
 
         private CalibrationImageEntry _selectedTifImage;
+        private List<double> _lastDoseValues;
+        private List<double> _lastOdValues;
+        private double _lastBackgroundMedian;
+        private double[] _lastPolynomialCoefficients;
+        private int _successfulSaveCount = 0;
+
+
         public CalibrationImageEntry SelectedCalibrationFile
         {
             get { return _selectedTifImage; }
@@ -97,10 +104,23 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
         private void Save()
         {
-            string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            var exporter = new SingleFileExporter(".json", $"calibration_{dateString}");
+            if (_lastDoseValues == null || _lastOdValues == null || _lastPolynomialCoefficients == null)
+            {
+                ShowToast("Please run calibration first (Process) before saving.", 3);
+                return;
+            }
 
-            string exportPath = exporter.GetExportPath($"calibration_{dateString}");
+            string dateString = DateTime.Now.ToString("yyyy-MM-dd");
+
+            _successfulSaveCount++;
+
+            string fileName = $"calibration_{dateString}";
+
+            // Pass the save count as the suffix
+            var exporter = new SingleFileExporter(".json", suggestedSuffix: _successfulSaveCount.ToString());
+
+
+            string exportPath = exporter.GetExportPath(fileName);
             if (string.IsNullOrWhiteSpace(exportPath))
                 return;
 
@@ -108,24 +128,34 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             {
                 var calibrationInfo = new
                 {
-                    FileName = SelectedCalibrationFile?.FileName,
-                    CalibrationValue = CalibrationInputText,
-                    Unit = SelectedUnit
+                    FileName = fileName,
+                    CalibrationValues = CalibrationInputText,
+                    Unit = SelectedUnit,
+                    BackgroundMedian = _lastBackgroundMedian,
+                    PolynomialFitCoefficients = _lastPolynomialCoefficients
                 };
 
-                string json = System.Text.Json.JsonSerializer.Serialize(calibrationInfo, new System.Text.Json.JsonSerializerOptions
+                string json = JsonSerializer.Serialize(calibrationInfo, new System.Text.Json.JsonSerializerOptions
                 {
                     WriteIndented = true
                 });
 
                 File.WriteAllText(exportPath, json);
-                System.Windows.MessageBox.Show("Calibration data exported successfully.", "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                string folderPath = Path.GetDirectoryName(exportPath);
+                if (!string.IsNullOrEmpty(folderPath))
+                {
+                    Clipboard.SetText(folderPath);
+                }
+
+                ShowToast($"Calibration data exported successfully as {Path.GetFileName(exportPath)}. Folder path copied to clipboard.", 1);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
 
 
         private void RemoveSelected()
@@ -207,20 +237,30 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             }
 
             // Compute OD values using brightest image as reference
-            ShowToast("Calculating...", 2);
-            var odValues = CalibrationModel.CalculateOpticalDensities(imagePaths, brightestImagePath);
-            
+            ShowToast("Calculating...", 1);
+            var odResult = CalibrationModel.CalculateOpticalDensities(imagePaths, brightestImagePath);
+            var odValues = odResult.OdValues;
+            var backgroundMedian = odResult.BackgroundTransmittance;
+
+
 
             // Generate OD vs Dose plot
             // Sort doseValues ascending independently
             var sortedDoseValues = doseValues.OrderBy(x => x).ToList();
             var sortedOdValues = odValues.OrderBy(x => x).ToList();
-            var graphImage = CalibrationModel.GenerateOdDosePlot(sortedDoseValues, sortedOdValues);
+
+            var coefficients = CalibrationModel.FitPolynomial3rdDegree(sortedDoseValues, sortedOdValues);
+            ShowToast($"Polynomial Fit: y = {coefficients[3]:F4}x^3 + {coefficients[2]:F4}x^2 + {coefficients[1]:F4}x + {coefficients[0]:F4}", 3);
+
+            var graphImage = CalibrationModel.GenerateOdDosePlot(sortedDoseValues, sortedOdValues, coefficients);
+
 
             // Show result
+            _lastDoseValues = doseValues;
+            _lastOdValues = odValues;
+            _lastBackgroundMedian = backgroundMedian;
+            _lastPolynomialCoefficients = coefficients;
             DisplayedCalibrationImage = graphImage;
-
-            //ShowToast($"Calibration processed for {doseValues.Count} files");
         }
 
 

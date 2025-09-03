@@ -10,6 +10,8 @@ using OxyPlot;
 using OxyPlot.Series;
 using OxyPlot.Axes;
 using OxyPlot.Wpf;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace Filmauswertung_ModernUI.MVVM.Model
 {
@@ -23,6 +25,12 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             get => Path.GetFileNameWithoutExtension(FullPath);
         }
     }
+    public class OpticalDensityResult
+    {
+        public List<double> OdValues { get; set; }
+        public double BackgroundTransmittance { get; set; }
+    }
+
 
     internal static class CalibrationModel
     {
@@ -66,7 +74,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             // Dummy implementation – add actual saving logic here
         }
 
-        public static List<double> CalculateOpticalDensities(List<string> imagePaths, string brightestPath)
+        public static OpticalDensityResult CalculateOpticalDensities(List<string> imagePaths, string brightestPath)
         {
             if (imagePaths == null || imagePaths.Count < 2)
                 throw new ArgumentException("At least one background and one measurement image are required.");
@@ -91,14 +99,19 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 }
 
                 double medianRed = GetAverageRedAroundCOM(path);
-                double transmittance = medianRed / (backgroundMedian/255);
+                double transmittance = medianRed / (backgroundMedian / 255);
                 transmittance = Math.Max(0.01, Math.Min(transmittance, 1.0));
                 double od = -Math.Log10(transmittance);
                 odValues.Add(od);
             }
 
-            return odValues;
+            return new OpticalDensityResult
+            {
+                OdValues = odValues,
+                BackgroundTransmittance = backgroundMedian/255
+            };
         }
+
 
 
 
@@ -110,7 +123,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             return Math.Round(rnd.NextDouble() * 2, 2); // OD between 0.0 and 2.0
         }
 
-        public static BitmapImage GenerateOdDosePlot(List<double> doseValues, List<double> odValues)
+        public static BitmapImage GenerateOdDosePlot(List<double> doseValues, List<double> odValues, double[] coefficients)
         {
             if (doseValues == null || odValues == null || doseValues.Count != odValues.Count || doseValues.Count == 0)
                 throw new ArgumentException("Dose and OD values must be non-null and of equal non-zero length.");
@@ -124,10 +137,10 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 Title = "Dose [Gy]",
                 MinimumPadding = 0.1,
                 MaximumPadding = 0.1,
-                MajorGridlineStyle = LineStyle.Dot,        // dotted major gridlines
-                MajorGridlineColor = OxyColor.FromRgb(200, 200, 200), // light gray
-                MinorGridlineStyle = LineStyle.Dot,        // dotted minor gridlines
-                MinorGridlineColor = OxyColor.FromRgb(230, 230, 230), // even lighter gray
+                MajorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromRgb(200, 200, 200),
+                MinorGridlineStyle = LineStyle.Dot,
+                MinorGridlineColor = OxyColor.FromRgb(230, 230, 230),
                 MinorGridlineThickness = 0.5,
                 MajorGridlineThickness = 1
             });
@@ -146,21 +159,51 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 MajorGridlineThickness = 1
             });
 
-
-            var series = new LineSeries { MarkerType = MarkerType.Circle, MarkerSize = 4, MarkerStroke = OxyColors.DarkBlue };
+            // Original scatter series (points)
+            var series = new LineSeries
+            {
+                Title = "Data",
+                MarkerType = MarkerType.Circle,
+                MarkerSize = 4,
+                MarkerStroke = OxyColors.DarkBlue,
+                LineStyle = LineStyle.None
+            };
             for (int i = 0; i < doseValues.Count; i++)
             {
                 series.Points.Add(new DataPoint(doseValues[i], odValues[i]));
             }
             plotModel.Series.Add(series);
 
-            // Create temporary file path
-            string tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
+            // Polynomial fit curve (3rd degree)
+            var fitSeries = new LineSeries
+            {
+                Title = "3rd Degree Fit",
+                Color = OxyColors.Red,
+                StrokeThickness = 2
+            };
 
-            // Export to file
+            // Generate smooth x values for plotting the curve
+            double minX = doseValues.Min();
+            double maxX = doseValues.Max();
+            int steps = 200; // smoothness
+            double step = (maxX - minX) / steps;
+
+            for (int i = 0; i <= steps; i++)
+            {
+                double x = minX + i * step;
+                double y = coefficients[0] +
+                           coefficients[1] * x +
+                           coefficients[2] * Math.Pow(x, 2) +
+                           coefficients[3] * Math.Pow(x, 3);
+                fitSeries.Points.Add(new DataPoint(x, y));
+            }
+            plotModel.Series.Add(fitSeries);
+
+
+            // Export plot to image
+            string tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
             PngExporter.Export(plotModel, tempFilePath, 1600, 900, 96);
 
-            // Load BitmapImage from file
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
@@ -168,18 +211,11 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             bitmap.EndInit();
             bitmap.Freeze();
 
-            // Optionally delete temp file after loading
-            try
-            {
-                File.Delete(tempFilePath);
-            }
-            catch
-            {
-                // Ignore deletion errors
-            }
+            try { File.Delete(tempFilePath); } catch { }
 
             return bitmap;
         }
+
 
 
 
@@ -362,5 +398,24 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             double averageValue = circleValues.Average();
             return averageValue;
         }
+
+        public static double[] FitPolynomial3rdDegree(List<double> xValues, List<double> yValues)
+        {
+            if (xValues == null || yValues == null || xValues.Count != yValues.Count || xValues.Count < 4)
+                throw new ArgumentException("At least 4 points are required for a 3rd-degree polynomial fit.");
+
+            int n = xValues.Count;
+
+            // Build Vandermonde matrix for 3rd-degree polynomial (1, x, x^2, x^3)
+            var matrix = DenseMatrix.Create(n, 4, (i, j) => Math.Pow(xValues[i], j));
+            var yVector = DenseVector.OfEnumerable(yValues);
+
+            // Solve least squares system
+            var coefficients = matrix.QR().Solve(yVector);
+
+            // coefficients[0] = a0, coefficients[1] = a1, ..., coefficients[3] = a3
+            return coefficients.ToArray();
+        }
+
     }
 }
