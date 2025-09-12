@@ -3,14 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Windows;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using OxyPlot;
-using OxyPlot.Series;
-using OxyPlot.Axes;
-using OxyPlot.Wpf;
-using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace Filmauswertung_ModernUI.MVVM.Model
@@ -44,34 +37,6 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                     FullPath = path
                 })
                 ?? Enumerable.Empty<CalibrationImageEntry>();
-        }
-
-        public static BitmapImage LoadImage(string fullPath)
-        {
-            if (string.IsNullOrWhiteSpace(fullPath) || !File.Exists(fullPath))
-                return null;
-
-            try
-            {
-                var bmp = new BitmapImage();
-                bmp.BeginInit();
-                bmp.UriSource = new Uri(fullPath);
-                bmp.CacheOption = BitmapCacheOption.OnLoad;
-                bmp.EndInit();
-                bmp.Freeze();
-                return bmp;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to load image:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return null;
-            }
-        }
-
-        public static void SaveImage(BitmapImage image, string filePath)
-        {
-            Debug.WriteLine($"Saving image to {filePath}");
-            // Dummy implementation – add actual saving logic here
         }
 
         public static OpticalDensityResult CalculateOpticalDensities(List<string> imagePaths, string brightestPath)
@@ -110,114 +75,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 OdValues = odValues,
                 BackgroundTransmittance = backgroundMedian/255
             };
-        }
-
-
-
-
-        private static double ComputeODFromTiff(string path)
-        {
-            // Dummy optical density calculation
-            // In practice, you would load the image and compute OD from pixel data
-            Random rnd = new Random();
-            return Math.Round(rnd.NextDouble() * 2, 2); // OD between 0.0 and 2.0
-        }
-
-        public static BitmapImage GenerateOdDosePlot(List<double> doseValues, List<double> odValues, double[] coefficients)
-        {
-            if (doseValues == null || odValues == null || doseValues.Count != odValues.Count || doseValues.Count == 0)
-                throw new ArgumentException("Dose and OD values must be non-null and of equal non-zero length.");
-
-            var plotModel = new PlotModel { Title = "Optical Density vs Dose" };
-            plotModel.Background = OxyColors.White;
-
-            plotModel.Axes.Add(new LinearAxis
-            {
-                Position = AxisPosition.Bottom,
-                Title = "Dose [Gy]",
-                MinimumPadding = 0.1,
-                MaximumPadding = 0.1,
-                MajorGridlineStyle = LineStyle.Dot,
-                MajorGridlineColor = OxyColor.FromRgb(200, 200, 200),
-                MinorGridlineStyle = LineStyle.Dot,
-                MinorGridlineColor = OxyColor.FromRgb(230, 230, 230),
-                MinorGridlineThickness = 0.5,
-                MajorGridlineThickness = 1
-            });
-
-            plotModel.Axes.Add(new LinearAxis
-            {
-                Position = AxisPosition.Left,
-                Title = "Optical Density",
-                MinimumPadding = 0.1,
-                MaximumPadding = 0.1,
-                MajorGridlineStyle = LineStyle.Dot,
-                MajorGridlineColor = OxyColor.FromRgb(200, 200, 200),
-                MinorGridlineStyle = LineStyle.Dot,
-                MinorGridlineColor = OxyColor.FromRgb(230, 230, 230),
-                MinorGridlineThickness = 0.5,
-                MajorGridlineThickness = 1
-            });
-
-            // Original scatter series (points)
-            var series = new LineSeries
-            {
-                Title = "Data",
-                MarkerType = MarkerType.Circle,
-                MarkerSize = 4,
-                MarkerStroke = OxyColors.DarkBlue,
-                LineStyle = LineStyle.None
-            };
-            for (int i = 0; i < doseValues.Count; i++)
-            {
-                series.Points.Add(new DataPoint(doseValues[i], odValues[i]));
-            }
-            plotModel.Series.Add(series);
-
-            // Polynomial fit curve (3rd degree)
-            var fitSeries = new LineSeries
-            {
-                Title = "3rd Degree Fit",
-                Color = OxyColors.Red,
-                StrokeThickness = 2
-            };
-
-            // Generate smooth x values for plotting the curve
-            double minX = doseValues.Min();
-            double maxX = doseValues.Max();
-            int steps = 200; // smoothness
-            double step = (maxX - minX) / steps;
-
-            for (int i = 0; i <= steps; i++)
-            {
-                double x = minX + i * step;
-                double y = coefficients[0] +
-                           coefficients[1] * x +
-                           coefficients[2] * Math.Pow(x, 2) +
-                           coefficients[3] * Math.Pow(x, 3);
-                fitSeries.Points.Add(new DataPoint(x, y));
-            }
-            plotModel.Series.Add(fitSeries);
-
-
-            // Export plot to image
-            string tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".png");
-            PngExporter.Export(plotModel, tempFilePath, 1600, 900, 96);
-
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(tempFilePath);
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            try { File.Delete(tempFilePath); } catch { }
-
-            return bitmap;
-        }
-
-
-
+        }    
 
         public class BrightnessAnalysisResult
         {
@@ -399,21 +257,61 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             return averageValue;
         }
 
-        public static double[] FitPolynomial3rdDegree(List<double> xValues, List<double> yValues)
+        public static double[] FitPolynomial3rdDegree(List<double> odValues, List<double> doseValues)
         {
-            if (xValues == null || yValues == null || xValues.Count != yValues.Count || xValues.Count < 4)
+            if (odValues == null || doseValues == null || odValues.Count != doseValues.Count || odValues.Count < 4)
                 throw new ArgumentException("At least 4 points are required for a 3rd-degree polynomial fit.");
 
-            int n = xValues.Count;
+            int n = odValues.Count;
+
+            Debug.WriteLine("=== FitPolynomial3rdDegree Debugging ===");
+            Debug.WriteLine($"Number of points: {n}");
+
+            // Print input pairs (OD, Dose)
+            for (int i = 0; i < n; i++)
+            {
+                Debug.WriteLine($"Point {i}: OD = {odValues[i]}, Dose = {doseValues[i]}");
+            }
 
             // Build Vandermonde matrix for 3rd-degree polynomial (1, x, x^2, x^3)
-            var matrix = DenseMatrix.Create(n, 4, (i, j) => Math.Pow(xValues[i], j));
-            var yVector = DenseVector.OfEnumerable(yValues);
+            var matrix = DenseMatrix.Create(n, 4, (i, j) => Math.Pow(odValues[i], j));
+            var yVector = DenseVector.OfEnumerable(doseValues);
 
-            // Solve least squares system
+            Debug.WriteLine("Vandermonde Matrix:");
+            for (int i = 0; i < n; i++)
+            {
+                Debug.WriteLine($"Row {i}: {matrix[i, 0]}, {matrix[i, 1]}, {matrix[i, 2]}, {matrix[i, 3]}");
+            }
+
+            Debug.WriteLine("Y Vector (Doses):");
+            for (int i = 0; i < n; i++)
+            {
+                Debug.WriteLine($"y[{i}] = {yVector[i]}");
+            }
+
+            // Solve least squares system (minimize error between predicted dose and actual dose)
             var coefficients = matrix.QR().Solve(yVector);
 
-            // coefficients[0] = a0, coefficients[1] = a1, ..., coefficients[3] = a3
+            Debug.WriteLine("Fitted Coefficients:");
+            Debug.WriteLine($"a0 = {coefficients[0]}");
+            Debug.WriteLine($"a1 = {coefficients[1]}");
+            Debug.WriteLine($"a2 = {coefficients[2]}");
+            Debug.WriteLine($"a3 = {coefficients[3]}");
+
+            // Check how well the fit reproduces the input
+            for (int i = 0; i < n; i++)
+            {
+                double predicted = coefficients[0]
+                                 + coefficients[1] * odValues[i]
+                                 + coefficients[2] * Math.Pow(odValues[i], 2)
+                                 + coefficients[3] * Math.Pow(odValues[i], 3);
+                Debug.WriteLine($"Check Point {i}: OD = {odValues[i]}, Actual Dose = {doseValues[i]}, Predicted Dose = {predicted}");
+            }
+
+            Debug.WriteLine("=== End FitPolynomial3rdDegree Debugging ===");
+
+            // coefficients[0] = a0, coefficients[1] = a1, coefficients[2] = a2, coefficients[3] = a3
+            // Dose ≈ a0 + a1*OD + a2*OD^2 + a3*OD^3
             return coefficients.ToArray();
         }
 

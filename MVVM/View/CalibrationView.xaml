@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:oxy="http://oxyplot.org/wpf"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
     d:DesignHeight="600"
     d:DesignWidth="1000"
@@ -61,18 +62,13 @@
                 </StackPanel>
             </Grid>
 
-            <!--  Center Panel: Display  -->
             <Grid Grid.Column="1" Margin="10">
-                <Viewbox
-                    Stretch="Uniform"
-                    StretchDirection="Both"
-                    Visibility="{Binding DisplayedCalibrationImage, Converter={StaticResource NullToVisibilityConverter}}">
-                    <Image
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Source="{Binding DisplayedCalibrationImage}"
-                        Stretch="None" />
-                </Viewbox>
+                <oxy:PlotView
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Background="Transparent"
+                    Model="{Binding CalibrationPlotModel}"
+                    Visibility="{Binding CalibrationPlotModel, Converter={StaticResource NullToVisibilityConverter}}" />
 
                 <TextBlock
                     HorizontalAlignment="Center"
@@ -83,9 +79,10 @@
                     Text="Import irradiated films and enter associated dose values separated by ';'.&#x0a;You can either use ',' or '.' as decimal separator.&#x0a;Always include a background scan and dose value '0'.&#x0a;The order of images and values does not matter."
                     TextAlignment="Center"
                     TextWrapping="Wrap"
-                    Visibility="{Binding DisplayedCalibrationImage, Converter={StaticResource InverseNullToVisibilityConverter}}" />
-
+                    Visibility="{Binding CalibrationPlotModel, Converter={StaticResource InverseNullToVisibilityConverter}}" />
             </Grid>
+
+
 
 
             <!--  Right Panel: Controls  -->

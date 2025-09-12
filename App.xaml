@@ -23,6 +23,7 @@
                 <ResourceDictionary Source="Theme/ScrollBar.xaml" />
                 <ResourceDictionary Source="Theme/DynamicComboBox.xaml" />
                 <ResourceDictionary Source="Theme/DynamicTextBox.xaml" />
+                <ResourceDictionary Source="/Theme/DynamicCheckBox.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!--  DataTemplates  -->

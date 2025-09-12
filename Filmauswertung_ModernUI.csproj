@@ -138,8 +138,10 @@
     <Compile Include="Converters\VisibilityConverter.cs" />
     <Compile Include="Core\Extensions.cs" />
     <Compile Include="Core\Interfaces\IImageService.cs" />
+    <Compile Include="Core\Interfaces\IToastService.cs" />
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
+    <Compile Include="MVVM\Model\CalculationModel.cs" />
     <Compile Include="MVVM\Model\CalibrationModel.cs" />
     <Compile Include="MVVM\Model\CutModel.cs" />
     <Compile Include="MVVM\Model\GlueModel.cs" />
@@ -157,6 +159,7 @@
     <Compile Include="Services\ImageService.cs" />
     <Compile Include="Services\Importer.cs" />
     <Compile Include="Services\SliderHelper.cs" />
+    <Compile Include="Services\ToastService.cs" />
     <Compile Include="Services\ToggleSwitchHelper.cs" />
     <Page Include="MVVM\View\DoseViewerView.xaml">
       <SubType>Designer</SubType>
@@ -191,6 +194,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="MVVM\View\ViewCutRotateViews\RotateView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Theme\DynamicCheckBox.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

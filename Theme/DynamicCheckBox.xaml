@@ -1,0 +1,76 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="DynamicCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontFamily" Value="/Fonts/#Poppins" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                        <!--  Rahmen / Box  -->
+                        <Border
+                            x:Name="CheckBorder"
+                            Width="18"
+                            Height="18"
+                            Margin="0,0,8,0"
+                            Background="Transparent"
+                            BorderBrush="White"
+                            BorderThickness="1"
+                            CornerRadius="3">
+                            <!--  Haken (Path)  -->
+                            <Path
+                                x:Name="CheckMark"
+                                Data="M 0 4 L 4 8 L 10 0"
+                                SnapsToDevicePixels="True"
+                                Stretch="Uniform"
+                                Stroke="#AA7CFC00"
+                                StrokeEndLineCap="Round"
+                                StrokeLineJoin="Round"
+                                StrokeStartLineCap="Round"
+                                StrokeThickness="2"
+                                Visibility="Collapsed" />
+                        </Border>
+
+                        <!--  Text (TextBlock statt ContentPresenter, damit Foreground bindbar ist)  -->
+                        <TextBlock
+                            x:Name="contentText"
+                            VerticalAlignment="Center"
+                            FontFamily="{TemplateBinding FontFamily}"
+                            FontSize="{TemplateBinding FontSize}"
+                            Foreground="LightGray"
+                            Text="{TemplateBinding Content}" />
+                    </StackPanel>
+
+                    <ControlTemplate.Triggers>
+                        <!--  Hover  -->
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="CheckBorder" Property="Background" Value="#33303050" />
+                        </Trigger>
+
+                        <!--  Pressed  -->
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="CheckBorder" Property="Background" Value="#2E2C40" />
+                            <Setter TargetName="contentText" Property="Foreground" Value="#AA7CFC00" />
+                        </Trigger>
+
+                        <!--  Checked  -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="CheckBorder" Property="Background" Value="#2E2C40" />
+                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#AA7CFC00" />
+                        </Trigger>
+
+                        <!--  Disabled  -->
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="CheckBorder" Property="BorderBrush" Value="#555" />
+                            <Setter TargetName="contentText" Property="Foreground" Value="#555" />
+                            <Setter TargetName="CheckMark" Property="Stroke" Value="#555" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

@@ -110,7 +110,7 @@
                             Width="100"
                             Height="40"
                             extensions:Extensions.Icon="◀"
-                            Command="{Binding ImageButton1Command}"
+                            Command="{Binding LeftImageCommand}"
                             Content="Previous Dose"
                             Style="{StaticResource DynamicButton}" />
 
@@ -129,7 +129,7 @@
                             Height="40"
                             Margin="10,0,0,0"
                             extensions:Extensions.Icon="▶"
-                            Command="{Binding ImageButton2Command}"
+                            Command="{Binding RightImageCommand}"
                             Content="Next Dose"
                             Style="{StaticResource DynamicButton}" />
                     </StackPanel>
@@ -175,7 +175,10 @@
             </Grid.ColumnDefinitions>
 
             <!--  Smoothness Slider  -->
-            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+            <StackPanel
+                Grid.Column="0"
+                Margin="0,20,0,0"
+                HorizontalAlignment="Center">
                 <TextBlock
                     HorizontalAlignment="Center"
                     Foreground="LightGray"
@@ -197,7 +200,8 @@
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Content="SRS Resampling"
-                IsChecked="{Binding SrsResampling}" />
+                IsChecked="{Binding SrsResampling}"
+                Style="{StaticResource DynamicCheckBox}" />
 
             <!--  Left Dropdown with Label  -->
             <StackPanel

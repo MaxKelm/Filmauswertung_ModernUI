@@ -1,6 +1,6 @@
 ﻿using Filmauswertung_ModernUI.Core;
+using Filmauswertung_ModernUI.Core.Interfaces;
 using Filmauswertung_ModernUI.MVVM.Model;
-using Filmauswertung_ModernUI.MVVM.View;
 using Filmauswertung_ModernUI.Services;
 using Microsoft.Win32;
 using System;
@@ -8,83 +8,78 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Text.Json;           // For JSON serialization
+using System.Text.Json;
 using System.Windows;
-using System.Windows.Input;
-using System.Windows.Media.Imaging;
-
+using OxyPlot;
+using OxyPlot.Series;
+using OxyPlot.Axes;
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel
 {
     internal class CalibrationViewModel : ObservableObject
     {
-        public ObservableCollection<CalibrationImageEntry> CalibrationFileNamesView { get; } = new ObservableCollection<CalibrationImageEntry>();
+        public ObservableCollection<CalibrationImageEntry> CalibrationFileNamesView { get; }
+            = new ObservableCollection<CalibrationImageEntry>();
 
-        private CalibrationImageEntry _selectedTifImage;
+        private readonly IToastService _toastService = new ToastService();
+        private CalibrationImageEntry _selectedCalibrationFile;
+
         private List<double> _lastDoseValues;
         private List<double> _lastOdValues;
         private double _lastBackgroundMedian;
         private double[] _lastPolynomialCoefficients;
         private int _successfulSaveCount = 0;
 
+        private PlotModel _calibrationPlotModel;
+        public PlotModel CalibrationPlotModel
+        {
+            get => _calibrationPlotModel;
+            set => SetProperty(ref _calibrationPlotModel, value);
+        }
 
         public CalibrationImageEntry SelectedCalibrationFile
         {
-            get { return _selectedTifImage; }
-            set
-            {
-                if (SetProperty(ref _selectedTifImage, value))
-                {
-                }
-            }
-        }
-
-        private BitmapImage _displayedCalibrationImage;
-        public BitmapImage DisplayedCalibrationImage
-        {
-            get { return _displayedCalibrationImage; }
-            set { SetProperty(ref _displayedCalibrationImage, value); }
+            get => _selectedCalibrationFile;
+            set => SetProperty(ref _selectedCalibrationFile, value);
         }
 
         private string _calibrationInputText;
         public string CalibrationInputText
         {
-            get { return _calibrationInputText; }
-            set { SetProperty(ref _calibrationInputText, value); }
+            get => _calibrationInputText;
+            set => SetProperty(ref _calibrationInputText, value);
         }
 
         private string _selectedUnit;
         public string SelectedUnit
         {
-            get { return _selectedUnit; }
-            set { SetProperty(ref _selectedUnit, value); }
+            get => _selectedUnit;
+            set => SetProperty(ref _selectedUnit, value);
         }
 
         public ObservableCollection<string> Units { get; } = new ObservableCollection<string> { "Gy", "cGy", "mGy" };
 
-        public RelayCommand ImportCommand { get; set; }
-        public RelayCommand SaveCommand { get; set; }
-        public RelayCommand RemoveCommand { get; set; }
-        public RelayCommand ProcessCommand { get; set; }
+        public RelayCommand ImportCommand { get; }
+        public RelayCommand SaveCommand { get; }
+        public RelayCommand RemoveCommand { get; }
+        public RelayCommand ProcessCommand { get; }
 
         public CalibrationViewModel()
         {
-            SelectedUnit = "Gy";  // default unit selected
-            ImportCommand = new RelayCommand(param => Import());
-            SaveCommand = new RelayCommand(param => Save(), param => DisplayedCalibrationImage != null);
-            RemoveCommand = new RelayCommand(param => RemoveSelected(), param => SelectedCalibrationFile != null);
-            ProcessCommand = new RelayCommand(param => Process(), param => SelectedCalibrationFile != null);
+            SelectedUnit = "Gy";
+
+            ImportCommand = new RelayCommand(_ => Import());
+            SaveCommand = new RelayCommand(_ => Save(), _ => _lastPolynomialCoefficients != null);
+            RemoveCommand = new RelayCommand(_ => RemoveSelected(), _ => SelectedCalibrationFile != null);
+            ProcessCommand = new RelayCommand(_ => Process(), _ => SelectedCalibrationFile != null);
         }
 
         private async void Import()
         {
             var importer = new MultipleFilesImporter(new[] { ".tif" });
-
             var selected = ImportDialogService.ShowDialog(importer);
-            if (string.IsNullOrWhiteSpace(selected))
-                return;
 
-            if (!importer.CanImport(selected))
+            if (string.IsNullOrWhiteSpace(selected) || !importer.CanImport(selected))
             {
                 MessageBox.Show("Selected files are not valid TIF files.", "Import Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
@@ -110,16 +105,11 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 return;
             }
 
-            string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-
             _successfulSaveCount++;
-
+            string dateString = DateTime.Now.ToString("yyyy-MM-dd");
             string fileName = $"calibration_{dateString}";
 
-            // Pass the save count as the suffix
             var exporter = new SingleFileExporter(".json", suggestedSuffix: _successfulSaveCount.ToString());
-
-
             string exportPath = exporter.GetExportPath(fileName);
             if (string.IsNullOrWhiteSpace(exportPath))
                 return;
@@ -135,28 +125,20 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                     PolynomialFitCoefficients = _lastPolynomialCoefficients
                 };
 
-                string json = JsonSerializer.Serialize(calibrationInfo, new System.Text.Json.JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
+                string json = JsonSerializer.Serialize(calibrationInfo, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(exportPath, json);
 
                 string folderPath = Path.GetDirectoryName(exportPath);
                 if (!string.IsNullOrEmpty(folderPath))
-                {
                     Clipboard.SetText(folderPath);
-                }
 
-                ShowToast($"Calibration data exported successfully as {Path.GetFileName(exportPath)}. Folder path copied to clipboard.", 1);
+                ShowToast($"Calibration data exported successfully as {Path.GetFileName(exportPath)}. Folder path copied to clipboard.", 3);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-
 
         private void RemoveSelected()
         {
@@ -176,9 +158,10 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             }
 
             var entries = CalibrationInputText
-                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .ToList();
+    .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+    .Select(s => s.Trim().Replace(',', '.'))
+    .ToList();
+
 
             if (entries.Count != CalibrationFileNamesView.Count)
             {
@@ -186,10 +169,8 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 return;
             }
 
-            var normalizedEntries = entries.Select(s => s.Replace(',', '.')).ToList();
-
             var doseValues = new List<double>();
-            foreach (var entry in normalizedEntries)
+            foreach (var entry in entries)
             {
                 if (!double.TryParse(entry, System.Globalization.NumberStyles.Any,
                     System.Globalization.CultureInfo.InvariantCulture, out double val))
@@ -198,23 +179,22 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                     return;
                 }
 
-                // Convert to Gy based on SelectedUnit
+                // Convert to Gy (C# 7.3 compatible)
                 switch (SelectedUnit)
                 {
                     case "Gy":
                         // no conversion needed
                         break;
                     case "cGy":
-                        val = val / 100.0;  // centi-Gray to Gray
+                        val = val / 100.0;
                         break;
                     case "mGy":
-                        val = val / 1000.0; // milli-Gray to Gray
+                        val = val / 1000.0;
                         break;
                     default:
-                        ShowToast($"Unknown dose unit: '{SelectedUnit}'");
-                        return;
+                        // fallback, keep val as is
+                        break;
                 }
-
                 doseValues.Add(val);
             }
 
@@ -224,59 +204,112 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 return;
             }
 
-            // Get image paths
             var imagePaths = CalibrationFileNamesView.Select(e => e.FullPath).ToList();
-
-            // Analyze brightness
             var brightnessAnalysis = CalibrationModel.AnalyzeImageBrightness(imagePaths);
             var brightestImagePath = brightnessAnalysis.BrightestImagePath;
 
             foreach (var warning in brightnessAnalysis.Warnings)
-            {
-                ShowToast(warning, 5);  // or collect and show all at once
-            }
+                ShowToast(warning, 5);
 
-            // Compute OD values using brightest image as reference
-            ShowToast("Calculating...", 1);
             var odResult = CalibrationModel.CalculateOpticalDensities(imagePaths, brightestImagePath);
             var odValues = odResult.OdValues;
             var backgroundMedian = odResult.BackgroundTransmittance;
 
-
-
-            // Generate OD vs Dose plot
-            // Sort doseValues ascending independently
             var sortedDoseValues = doseValues.OrderBy(x => x).ToList();
             var sortedOdValues = odValues.OrderBy(x => x).ToList();
 
-            var coefficients = CalibrationModel.FitPolynomial3rdDegree(sortedDoseValues, sortedOdValues);
-            ShowToast($"Polynomial Fit: y = {coefficients[3]:F4}x^3 + {coefficients[2]:F4}x^2 + {coefficients[1]:F4}x + {coefficients[0]:F4}", 3);
+            var coefficients = CalibrationModel.FitPolynomial3rdDegree(sortedOdValues, sortedDoseValues);
+            ShowToast($"Polynomial Fit: y = {coefficients[3]:F4} od^3 + {coefficients[2]:F4} od^2 + {coefficients[1]:F4} od + {coefficients[0]:F4}", 2);
 
-            var graphImage = CalibrationModel.GenerateOdDosePlot(sortedDoseValues, sortedOdValues, coefficients);
+            UpdateCalibrationPlot(sortedOdValues, sortedDoseValues, coefficients);
 
-
-            // Show result
+            // Store last results
             _lastDoseValues = doseValues;
             _lastOdValues = odValues;
             _lastBackgroundMedian = backgroundMedian;
             _lastPolynomialCoefficients = coefficients;
-            DisplayedCalibrationImage = graphImage;
         }
+        private void UpdateCalibrationPlot(List<double> odValues, List<double> doseValues, double[] coefficients)
+        {
+            if (odValues == null || doseValues == null || coefficients == null)
+                return;
 
+            var model = new PlotModel
+            {
+                Title = "Calibration Curve",
+                TextColor = OxyColors.LightGray,
+                TitleColor = OxyColors.LightGray,
+                PlotAreaBorderColor = OxyColors.LightGray
+            };
+
+            // Scatter points for measured OD vs Dose
+            var scatter = new ScatterSeries
+            {
+                MarkerType = MarkerType.Circle,
+                MarkerFill = OxyColors.CornflowerBlue,
+                MarkerSize = 4,
+                Title = "Measured Data"
+            };
+
+            for (int i = 0; i < odValues.Count; i++)
+                scatter.Points.Add(new ScatterPoint(odValues[i], doseValues[i]));
+
+            model.Series.Add(scatter);
+
+            // Fit cubic polynomial (smooth curve)
+            var line = new LineSeries
+            {
+                Color = OxyColors.Red,
+                StrokeThickness = 2,
+                Title = "3rd Degree Fit"
+            };
+
+            double xMin = odValues.Min();
+            double xMax = odValues.Max();
+            int steps = 200;
+            double step = (xMax - xMin) / steps;
+
+            for (int i = 0; i <= steps; i++)
+            {
+                double x = xMin + i * step;
+                double y = coefficients[0] + coefficients[1] * x + coefficients[2] * x * x + coefficients[3] * x * x * x;
+                line.Points.Add(new DataPoint(x, y));
+            }
+
+            model.Series.Add(line);
+
+            // Axes with light gray font and gridlines
+            model.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                Title = "Optical Density",
+                TitleColor = OxyColors.LightGray,
+                TextColor = OxyColors.LightGray,
+                MajorGridlineStyle = LineStyle.Solid,
+                MinorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColors.LightGray,
+                MinorGridlineColor = OxyColors.LightGray
+            });
+
+            model.Axes.Add(new LinearAxis
+            {
+                Position = AxisPosition.Left,
+                Title = "Dose [Gy]",
+                TitleColor = OxyColors.LightGray,
+                TextColor = OxyColors.LightGray,
+                MajorGridlineStyle = LineStyle.Solid,
+                MinorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColors.LightGray,
+                MinorGridlineColor = OxyColors.LightGray
+            });
+
+            CalibrationPlotModel = model;
+        }
 
 
         private void ShowToast(string message, int duration = 3)
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                var toast = new ToastWindow
-                {
-                    ToastMessage = message,
-                    ToastDuration = TimeSpan.FromSeconds(duration)
-                };
-                toast.ShowToast();
-            });
+            _toastService.ShowToast(message, duration);
         }
-
     }
 }
