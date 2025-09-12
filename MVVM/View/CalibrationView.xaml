@@ -7,6 +7,7 @@
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:oxy="http://oxyplot.org/wpf"
+    xmlns:toggle="clr-namespace:Filmauswertung_ModernUI.Services"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
     d:DesignHeight="600"
     d:DesignWidth="1000"
@@ -103,6 +104,16 @@
                     Command="{Binding SaveCommand}"
                     Content="Save"
                     Style="{StaticResource DynamicButton}" />
+                <ToggleButton
+                    Width="80"
+                    Height="60"
+                    HorizontalAlignment="Center"
+                    toggle:ToggleSwitchHelper.IconChecked="x³"
+                    toggle:ToggleSwitchHelper.IconUnchecked="📈"
+                    toggle:ToggleSwitchHelper.LabelChecked="3rd poly"
+                    toggle:ToggleSwitchHelper.LabelUnchecked="hyperbola"
+                    IsChecked="{Binding UsePolynomialFit, Mode=TwoWay}"
+                    Style="{StaticResource DynamicToggleButton}" />
             </StackPanel>
         </Grid>
 

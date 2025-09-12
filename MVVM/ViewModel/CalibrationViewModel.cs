@@ -57,6 +57,23 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             set => SetProperty(ref _selectedUnit, value);
         }
 
+        private bool _usePolynomialFit = true;
+        public bool UsePolynomialFit
+        {
+            get => _usePolynomialFit;
+            set
+            {
+                if (SetProperty(ref _usePolynomialFit, value))
+                {
+                    // Re-process plot with selected fit type
+                    if (_lastDoseValues != null && _lastOdValues != null)
+                    {
+                        Process();
+                    }
+                }
+            }
+        }
+
         public ObservableCollection<string> Units { get; } = new ObservableCollection<string> { "Gy", "cGy", "mGy" };
 
         public RelayCommand ImportCommand { get; }
@@ -218,8 +235,19 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             var sortedDoseValues = doseValues.OrderBy(x => x).ToList();
             var sortedOdValues = odValues.OrderBy(x => x).ToList();
 
-            var coefficients = CalibrationModel.FitPolynomial3rdDegree(sortedOdValues, sortedDoseValues);
-            ShowToast($"Polynomial Fit: y = {coefficients[3]:F4} od^3 + {coefficients[2]:F4} od^2 + {coefficients[1]:F4} od + {coefficients[0]:F4}", 2);
+            var coefficients = new double[0];
+            if (UsePolynomialFit)
+            {
+                // 3rd degree polynomial: y = a + b*x + c*x^2 + d*x^3
+                coefficients = CalibrationModel.FitPolynomial3rdDegree(sortedOdValues, sortedDoseValues);
+                ShowToast($"Polynomial Fit: dose = {coefficients[3]:F4} od^3 + {coefficients[2]:F4} od^2 + {coefficients[1]:F4} od + {coefficients[0]:F4}", 2);
+            }
+            else
+            {
+                // Inverse-linear fit: y = a + b / (x - c)
+                coefficients = CalibrationModel.FitInverseLinear(sortedOdValues, sortedDoseValues);
+                ShowToast($"Hyperbola Fit: dose = ({coefficients[0]:F4} + {coefficients[1]:F4}) / (od - {coefficients[2]:F4})", 2);
+            }
 
             UpdateCalibrationPlot(sortedOdValues, sortedDoseValues, coefficients);
 
@@ -229,10 +257,17 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             _lastBackgroundMedian = backgroundMedian;
             _lastPolynomialCoefficients = coefficients;
         }
+
         private void UpdateCalibrationPlot(List<double> odValues, List<double> doseValues, double[] coefficients)
         {
             if (odValues == null || doseValues == null || coefficients == null)
+            {
+                Console.WriteLine("UpdateCalibrationPlot: null input detected.");
                 return;
+            }
+
+            Console.WriteLine($"UpdateCalibrationPlot: odValues.Count={odValues.Count}, doseValues.Count={doseValues.Count}, coefficients.Length={coefficients.Length}");
+            Console.WriteLine("Coefficients: " + string.Join(", ", coefficients));
 
             var model = new PlotModel
             {
@@ -252,16 +287,19 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             };
 
             for (int i = 0; i < odValues.Count; i++)
+            {
                 scatter.Points.Add(new ScatterPoint(odValues[i], doseValues[i]));
+                Console.WriteLine($"Scatter point {i}: OD={odValues[i]}, Dose={doseValues[i]}");
+            }
 
             model.Series.Add(scatter);
 
-            // Fit cubic polynomial (smooth curve)
+            // Line series for fit
             var line = new LineSeries
             {
                 Color = OxyColors.Red,
                 StrokeThickness = 2,
-                Title = "3rd Degree Fit"
+                Title = coefficients.Length == 4 ? "3rd Degree Fit" : "Inverse-Linear Fit"
             };
 
             double xMin = odValues.Min();
@@ -269,11 +307,36 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             int steps = 200;
             double step = (xMax - xMin) / steps;
 
+            Console.WriteLine($"Fit line from xMin={xMin} to xMax={xMax}, steps={steps}");
+
             for (int i = 0; i <= steps; i++)
             {
                 double x = xMin + i * step;
-                double y = coefficients[0] + coefficients[1] * x + coefficients[2] * x * x + coefficients[3] * x * x * x;
+                double y;
+
+                if (coefficients.Length == 4)
+                {
+                    y = coefficients[0] + coefficients[1] * x + coefficients[2] * x * x + coefficients[3] * x * x * x;
+                }
+                else if (coefficients.Length == 3)
+                {
+                    double a = coefficients[0];
+                    double b = coefficients[1];
+                    double c = coefficients[2];
+                    double xAdjusted = Math.Abs(x - a) < 1e-12 ? x + 1e-12 : x; // avoid division by zero
+                    y = c + b / (xAdjusted - a); // INVERTED formula: Dose = c + b / (OD - a)
+                }
+                else
+                {
+                    y = coefficients[0];
+                }
+
                 line.Points.Add(new DataPoint(x, y));
+
+                if (i % 20 == 0) // Print every 20th point to reduce clutter
+                {
+                    Console.WriteLine($"Fit point {i}: x={x}, y={y}");
+                }
             }
 
             model.Series.Add(line);
@@ -304,8 +367,9 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             });
 
             CalibrationPlotModel = model;
-        }
 
+            Console.WriteLine("UpdateCalibrationPlot: plot updated successfully.");
+        }
 
         private void ShowToast(string message, int duration = 3)
         {

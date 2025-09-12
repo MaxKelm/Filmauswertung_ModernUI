@@ -29,7 +29,8 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         /// </summary>
         public static double[] ExtractDoseFromImage(BitmapImage image, Calibration calibration)
         {
-            if (image == null || calibration == null) return Array.Empty<double>();
+            if (image == null || calibration == null)
+                return Array.Empty<double>();
 
             // Convert to Bgra32 for easy channel extraction
             BitmapSource source = image;
@@ -41,10 +42,12 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             int stride = width * 4;
             byte[] pixels = new byte[height * stride];
             source.CopyPixels(pixels, stride, 0);
-            Console.WriteLine($"Background Median {calibration.BackgroundMedian}");
-            Console.WriteLine($"Coeffs {calibration.PolynomialFitCoefficients[0]}, {calibration.PolynomialFitCoefficients[1]}, {calibration.PolynomialFitCoefficients[2]}, {calibration.PolynomialFitCoefficients[3]}");
 
             double[] doseArray = new double[width * height];
+            double[] coeffs = calibration.PolynomialFitCoefficients;
+
+            bool isCubicFit = coeffs != null && coeffs.Length == 4;
+            bool isInverseLinearFit = coeffs != null && coeffs.Length == 3;
 
             for (int i = 0; i < width * height; i++)
             {
@@ -56,22 +59,28 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 double od = -Math.Log10(transmittance);
 
                 double dose = 0;
-                double[] coeffs = calibration.PolynomialFitCoefficients;
-                if (coeffs != null && coeffs.Length >= 4)
+
+                if (isCubicFit)
                 {
+                    // Cubic polynomial: dose = a + b*OD + c*OD^2 + d*OD^3
                     dose = coeffs[0] + coeffs[1] * od + coeffs[2] * Math.Pow(od, 2) + coeffs[3] * Math.Pow(od, 3);
+                }
+                else if (isInverseLinearFit)
+                {
+                    // Inverse-linear fit: dose = b / (OD - a) + c
+                    double a = coeffs[0];
+                    double b = coeffs[1];
+                    double c = coeffs[2];
+                    double odAdjusted = Math.Abs(od - a) < 1e-12 ? od + 1e-12 : od; // avoid division by zero
+                    dose = b / (odAdjusted - a) + c;
                 }
 
                 doseArray[i] = dose;
-
-                // Debug output for first few pixels
-                if (i < 10)
-                    Console.WriteLine($"Pixel {i}: Red={redValue:F2}, Norm={normalized:F3}, Trans={transmittance:F3}, OD={od:F3}, Dose={dose:F3}");
             }
 
-            Console.WriteLine($"Extracted {doseArray.Length} dose values from image ({width}x{height})");
             return doseArray;
         }
+
 
         public static BitmapImage ConvertDoseArrayToBitmap(double[] doseArray, int width, int height)
         {

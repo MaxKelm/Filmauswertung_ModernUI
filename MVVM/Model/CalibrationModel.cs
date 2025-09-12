@@ -1,9 +1,13 @@
-﻿using System;
+﻿using MathNet.Numerics.LinearAlgebra.Double;
+using MathNet.Numerics.Optimization;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Media.Imaging;
+using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.Optimization;
 using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace Filmauswertung_ModernUI.MVVM.Model
@@ -263,40 +267,12 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 throw new ArgumentException("At least 4 points are required for a 3rd-degree polynomial fit.");
 
             int n = odValues.Count;
-
-            Debug.WriteLine("=== FitPolynomial3rdDegree Debugging ===");
-            Debug.WriteLine($"Number of points: {n}");
-
-            // Print input pairs (OD, Dose)
-            for (int i = 0; i < n; i++)
-            {
-                Debug.WriteLine($"Point {i}: OD = {odValues[i]}, Dose = {doseValues[i]}");
-            }
-
             // Build Vandermonde matrix for 3rd-degree polynomial (1, x, x^2, x^3)
             var matrix = DenseMatrix.Create(n, 4, (i, j) => Math.Pow(odValues[i], j));
             var yVector = DenseVector.OfEnumerable(doseValues);
 
-            Debug.WriteLine("Vandermonde Matrix:");
-            for (int i = 0; i < n; i++)
-            {
-                Debug.WriteLine($"Row {i}: {matrix[i, 0]}, {matrix[i, 1]}, {matrix[i, 2]}, {matrix[i, 3]}");
-            }
-
-            Debug.WriteLine("Y Vector (Doses):");
-            for (int i = 0; i < n; i++)
-            {
-                Debug.WriteLine($"y[{i}] = {yVector[i]}");
-            }
-
             // Solve least squares system (minimize error between predicted dose and actual dose)
             var coefficients = matrix.QR().Solve(yVector);
-
-            Debug.WriteLine("Fitted Coefficients:");
-            Debug.WriteLine($"a0 = {coefficients[0]}");
-            Debug.WriteLine($"a1 = {coefficients[1]}");
-            Debug.WriteLine($"a2 = {coefficients[2]}");
-            Debug.WriteLine($"a3 = {coefficients[3]}");
 
             // Check how well the fit reproduces the input
             for (int i = 0; i < n; i++)
@@ -305,15 +281,57 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                                  + coefficients[1] * odValues[i]
                                  + coefficients[2] * Math.Pow(odValues[i], 2)
                                  + coefficients[3] * Math.Pow(odValues[i], 3);
-                Debug.WriteLine($"Check Point {i}: OD = {odValues[i]}, Actual Dose = {doseValues[i]}, Predicted Dose = {predicted}");
             }
-
-            Debug.WriteLine("=== End FitPolynomial3rdDegree Debugging ===");
-
             // coefficients[0] = a0, coefficients[1] = a1, coefficients[2] = a2, coefficients[3] = a3
             // Dose ≈ a0 + a1*OD + a2*OD^2 + a3*OD^3
             return coefficients.ToArray();
         }
+        public static double[] FitInverseLinear(List<double> odValues, List<double> doseValues)
+        {
+            if (odValues == null || doseValues == null || odValues.Count != doseValues.Count)
+                throw new ArgumentException("OD and Dose lists must be non-null and of the same length.");
+
+            // Initial guess
+            double a0 = odValues.Average();
+            double b0 = 1.0;
+            double c0 = doseValues.Min() * 0.1;
+            var initialGuess = Vector.Build.Dense(new double[] { a0, b0, c0 });
+
+            // Objective function
+            Func<Vector<double>, double> objective = parameters =>
+            {
+                double a = parameters[0];
+                double b = parameters[1];
+                double c = parameters[2];
+
+                double error = 0.0;
+                for (int i = 0; i < doseValues.Count; i++)
+                {
+                    double x = doseValues[i];
+                    double y = odValues[i];
+                    double xAdjusted = Math.Abs(x - c) < 1e-12 ? x + 1e-12 : x; // avoid division by zero
+                    double yFit = a + b / (xAdjusted - c);
+                    error += Math.Pow(y - yFit, 2);
+                }
+                return error;
+            };
+
+            try
+            {
+                var solver = new NelderMeadSimplex(1e-12, 10000);
+                var result = solver.FindMinimum(ObjectiveFunction.Value(objective), initialGuess);
+
+                if (result?.MinimizingPoint == null || result.MinimizingPoint.Count == 0)
+                    return null;
+
+                return result.MinimizingPoint.ToArray(); // a, b, c
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
 
     }
 }
