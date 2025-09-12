@@ -28,7 +28,7 @@
                 <!--  Left List  -->
                 <ColumnDefinition Width="*" />
                 <!--  Center Image  -->
-                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="200" />
                 <!--  Right Buttons  -->
             </Grid.ColumnDefinitions>
 
@@ -162,7 +162,15 @@
                     Command="{Binding SaveOpgCommand}"
                     Content="Save .opg"
                     Style="{StaticResource DynamicButton}" />
+                <!--  Dynamic Label for Dose Info  -->
+                <TextBlock
+                    Margin="0,20,0,0"
+                    FontWeight="Bold"
+                    Foreground="LightGray"
+                    Text="{Binding DynamicDoseText}"
+                    TextWrapping="Wrap" />
             </StackPanel>
+
         </Grid>
 
         <!--  Bottom controls  -->
@@ -187,7 +195,7 @@
                     Width="200"
                     extensions:Extensions.DisplayValue="{Binding SmoothnessLabel}"
                     IsSnapToTickEnabled="True"
-                    Maximum="20"
+                    Maximum="5"
                     Minimum="1"
                     Style="{StaticResource DynamicSlider}"
                     TickFrequency="1"

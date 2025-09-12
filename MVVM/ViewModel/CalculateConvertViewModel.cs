@@ -9,7 +9,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Xml.Linq;
 
 namespace Filmauswertung_ModernUI.MVVM.ViewModel
 {
@@ -79,6 +81,13 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             set => SetProperty(ref _dynamicLabelText, value);
         }
 
+        private string _dynamicDoseText;
+        public string DynamicDoseText
+        {
+            get => _dynamicDoseText;
+            set => SetProperty(ref _dynamicDoseText, value);
+        }
+
         // -----------------------------
         // Bottom Controls
         // -----------------------------
@@ -89,9 +98,15 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             set
             {
                 if (SetProperty(ref _smoothnessValue, value))
+                {
                     SmoothnessLabel = $"{value:F0}";
+
+                    // Trigger image update immediately when slider changes
+                    UpdateDisplayedImage();
+                }
             }
         }
+
 
         private string _smoothnessLabel;
         public string SmoothnessLabel
@@ -123,6 +138,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         {
             "Film", "SRS", "Other"
         };
+
         private string _selectedRightItem;
         public string SelectedRightItem
         {
@@ -192,39 +208,80 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
             if (CurrentCalibration != null)
             {
-                // Extract dose values from image using red channel, background median, and polynomial
+                // Extract dose values
                 CurrentDoseValues = CalculationModel.ExtractDoseFromImage(rawImage, CurrentCalibration);
 
+                // Apply smoothing based on SmoothnessValue (1–5)
+                int smoothLevel = (int)Clamp(SmoothnessValue, 1, 5);
+
+                if (smoothLevel > 1)
+                {
+                    int width = rawImage.PixelWidth;
+                    int height = rawImage.PixelHeight;
+                    double[] smoothed = new double[CurrentDoseValues.Length];
+
+                    // Determine window size based on smooth level
+                    int windowRadius = smoothLevel - 1; // 1=no smoothing, 2=>radius=1, ..., 5=>radius=4
+
+                    for (int y = 0; y < height; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            int index = y * width + x;
+                            double sum = 0;
+                            int count = 0;
+
+                            // Average over neighborhood
+                            for (int dy = -windowRadius; dy <= windowRadius; dy++)
+                            {
+                                int ny = y + dy;
+                                if (ny < 0 || ny >= height) continue;
+
+                                for (int dx = -windowRadius; dx <= windowRadius; dx++)
+                                {
+                                    int nx = x + dx;
+                                    if (nx < 0 || nx >= width) continue;
+
+                                    int nIndex = ny * width + nx;
+                                    sum += CurrentDoseValues[nIndex];
+                                    count++;
+                                }
+                            }
+
+                            smoothed[index] = sum / count;
+                        }
+                    }
+
+                    CurrentDoseValues = smoothed;
+                }
+
+                // Calculate statistics
                 var stats = CalculationModel.CalculateDoseStatistics(CurrentDoseValues);
                 var histogramBins = stats.histogramBins;
                 var histogramCounts = stats.histogramCounts;
                 var topPeaks = stats.topPeaks;
+                var medianDose = stats.medianDose;
 
-                // Create a short summary string for the toast
-                string toastMessage = "Top Dose Peaks:\n";
+                // Build summary string
+                string summary = "Top Dose Peaks:\n";
                 for (int i = 0; i < topPeaks.Length; i++)
-                {
-                    toastMessage += $"Peak {i + 1}: {topPeaks[i]:F2}\n";
-                }
+                    summary += $"Peak {i + 1}: {topPeaks[i]:F2} Gy\n";
+                summary += $"Median Dose: {medianDose:F2} Gy\n";
 
-                // Optionally, add histogram summary (e.g., min, max, mean)
                 double meanDose = histogramBins.Zip(histogramCounts, (bin, count) => bin * count).Sum() / Math.Max(histogramCounts.Sum(), 1);
-                toastMessage += $"Dose Range: {histogramBins.First():F2} - {histogramBins.Last():F2}\n";
-                toastMessage += $"Mean Dose: {meanDose:F2}";
+                summary += $"Dose Range: {histogramBins.First():F2} Gy - {histogramBins.Last():F2} Gy\n";
+                summary += $"Mean Dose: {meanDose:F2} Gy";
 
-                // Show the toast for 5 seconds
-                ShowToast(toastMessage, 5);
+                // Update dynamic label
+                DynamicDoseText = summary;
 
-
-                // Convert dose array to Viridis heatmap
-                DisplayedImage = CalculationModel.ConvertDoseArrayToBitmap(
-                    CurrentDoseValues, rawImage.PixelWidth, rawImage.PixelHeight
-                );
+                // Convert dose array to heatmap
+                DisplayedImage = CalculationModel.ConvertDoseArrayToBitmap(CurrentDoseValues, rawImage.PixelWidth, rawImage.PixelHeight);
             }
             else
             {
-                // Show raw image if no calibration loaded
                 DisplayedImage = rawImage;
+                DynamicLabelText = "Displayed Dose";
             }
         }
 
@@ -276,8 +333,77 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
         private void SaveOpg()
         {
-            MessageBox.Show("Save .opg functionality not yet implemented.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (!FileList.Any())
+            {
+                MessageBox.Show("No measurement images loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (CurrentCalibration == null)
+            {
+                MessageBox.Show("No calibration loaded. Cannot calculate doses.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Muster.opg");
+
+            // Suggest base folder based on first file
+            string baseName = Path.GetFileNameWithoutExtension(FileList.First().FileName);
+
+            // Use exporter to select a folder instead of a single file
+            var exporter = new SingleFileExporter(".opg", "CalcDose");
+            string savePath = exporter.GetExportPath(baseName);
+            if (string.IsNullOrEmpty(savePath))
+                return;
+
+            // Resolve target folder (directory of selected savePath)
+            string targetFolder = Path.GetDirectoryName(savePath);
+            if (!Directory.Exists(targetFolder))
+                Directory.CreateDirectory(targetFolder);
+
+            try
+            {
+                // Generate one OPG file per measurement
+                var results = CalculationModel.GenerateOpgFiles(
+                    FileList,
+                    _imageService,
+                    CurrentCalibration,
+                    SmoothnessValue,
+                    templatePath,
+                    SelectedLeftItem,
+                    SelectedRightItem,
+                    SrsResampling);
+
+                foreach (var kv in results)
+                {
+                    string outPath = Path.Combine(targetFolder, kv.Key);
+                    File.WriteAllText(outPath, kv.Value);
+                }
+
+                // Copy folder to clipboard
+                Clipboard.SetText(targetFolder);
+
+                ShowToast(
+                    $"Successfully generated {results.Count} OPG files in:\n{targetFolder}\nParent folder copied to clipboard.",
+                    1);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save OPG files:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
+
+
+
+
+
+        private static double Clamp(double value, double min, double max)
+        {
+            if (value < min) return min;
+            if (value > max) return max;
+            return value;
+        }
+
 
         private void ShowToast(string message, int duration = 3) => _toastService.ShowToast(message, duration);
     }

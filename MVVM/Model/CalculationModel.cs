@@ -1,6 +1,10 @@
-﻿using System;
+﻿using Filmauswertung_ModernUI.Core.Interfaces;
+using Filmauswertung_ModernUI.MVVM.ViewModel;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -90,8 +94,6 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             double min = doseArray.Min();
             double max = doseArray.Max();
 
-            Console.WriteLine($"Dose array min={min:F3}, max={max:F3}");
-
             var pixels = new byte[width * height * 4]; // BGRA32
             for (int i = 0; i < doseArray.Length; i++)
             {
@@ -123,23 +125,25 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             }
         }
 
-        public static (double[] histogramBins, int[] histogramCounts, double[] topPeaks) CalculateDoseStatistics(double[] doseArray, int numBins = 256)
+        public static (double[] histogramBins, int[] histogramCounts, double[] topPeaks, double medianDose) CalculateDoseStatistics(double[] doseArray, int numBins = 256)
         {
             if (doseArray == null || doseArray.Length == 0)
-                return (Array.Empty<double>(), Array.Empty<int>(), Array.Empty<double>());
+                return (Array.Empty<double>(), Array.Empty<int>(), Array.Empty<double>(), 0);
 
-            double minDose = doseArray.Where(d => d > 1e-6).DefaultIfEmpty(0).Min();
-            double maxDose = doseArray.Max();
+            // Filter out zero/background doses
+            var validDoses = doseArray.Where(d => d > 1e-6).ToArray();
+            if (!validDoses.Any()) return (Array.Empty<double>(), Array.Empty<int>(), Array.Empty<double>(), 0);
 
-            Console.WriteLine($"Calculating histogram: minDose={minDose:F3}, maxDose={maxDose:F3}");
+            double minDose = validDoses.Min();
+            double maxDose = validDoses.Max();
+            double medianDose = validDoses.Length > 0 ? validDoses.OrderBy(d => d).ElementAt(validDoses.Length / 2) : 0;
 
             double[] bins = new double[numBins];
             int[] counts = new int[numBins];
             double binWidth = (maxDose - minDose) / numBins;
 
-            foreach (var dose in doseArray)
+            foreach (var dose in validDoses)
             {
-                if (dose <= 1e-6) continue;
                 int binIndex = (int)((dose - minDose) / binWidth);
                 if (binIndex >= numBins) binIndex = numBins - 1;
                 counts[binIndex]++;
@@ -148,23 +152,16 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             for (int i = 0; i < numBins; i++)
                 bins[i] = minDose + (i + 0.5) * binWidth;
 
-            // Find top 3 peaks excluding background
-            List<(int index, int count)> binCounts = counts.Select((c, i) => (i, c)).ToList();
-            var topBins = binCounts
-                .Where(b => b.count > 0)
-                .OrderByDescending(b => b.count)
-                .Take(10)
-                .Where(b => bins[b.index] > 1e-3)
+            // Find top 3 peaks by **highest dose values** (not counts)
+            var topPeaksByValue = validDoses
+                .OrderByDescending(d => d)
                 .Take(3)
-                .Select(b => bins[b.index])
                 .ToArray();
 
-            Console.WriteLine("Histogram top peaks:");
-            for (int i = 0; i < topBins.Length; i++)
-                Console.WriteLine($"Peak {i + 1}: {topBins[i]:F3}");
-
-            return (bins, counts, topBins);
+            return (bins, counts, topPeaksByValue, medianDose);
         }
+
+
 
         private static Color ViridisColormap(double t)
         {
@@ -182,5 +179,310 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             if (value > max) return max;
             return value;
         }
+
+        /// <summary>
+        /// Generates OPG content for multiple dose images using a template.
+        /// </summary>
+        /// <param name="fileList">List of files to process</param>
+        /// <param name="imageService">Image service to load images</param>
+        /// <param name="calibration">Current calibration</param>
+        /// <param name="smoothnessValue">Smoothing level (1-5)</param>
+        /// <param name="templatePath">Full path to the Muster.opg template</param>
+        /// <returns>Final OPG content as string</returns>
+        public static Dictionary<string, string> GenerateOpgFiles(
+            IEnumerable<FileEntry> fileList,
+            IImageService imageService,
+            Calibration calibration,
+            double smoothnessValue,
+            string templatePath,
+            string selectedLeftItem,
+            string selectedRightItem,
+            bool srsResampling)
+        {
+            if (!File.Exists(templatePath))
+                throw new FileNotFoundException("OPG template not found.", templatePath);
+
+            var results = new Dictionary<string, string>();
+
+            foreach (var file in fileList)
+            {
+                if (!File.Exists(file.FullPath))
+                    continue;
+
+                // Load template fresh for each file
+                string templateContent = File.ReadAllText(templatePath);
+                var sb = new System.Text.StringBuilder(templateContent);
+
+                // Update Energy, Device Type, and Radiation Type
+                sb = new System.Text.StringBuilder(UpdateOpgHeader(sb.ToString(), selectedLeftItem, selectedRightItem));
+
+                // Determine if FFF mode is active
+                bool isFFF = false;
+                if (!string.IsNullOrEmpty(selectedLeftItem))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(selectedLeftItem, @"(\d+)([XFE])");
+                    if (match.Success)
+                    {
+                        string typeChar = match.Groups[2].Value.ToUpper();
+                        isFFF = typeChar == "F";
+                    }
+                }
+
+                // Insert <FFF>true</FFF> line if needed
+                if (isFFF)
+                {
+                    string pattern = @"(<DefectsInterpolated>.*?</DefectsInterpolated>)";
+                    var match = Regex.Match(sb.ToString(), pattern, RegexOptions.Singleline);
+                    if (match.Success)
+                    {
+                        sb.Replace(match.Value, match.Value + "\r\n<FFF>true</FFF>");
+                    }
+                }
+
+                // Process image
+                var rawImage = imageService.LoadImage(file.FullPath);
+
+                // Extract dose values
+                var doses = ExtractDoseFromImage(rawImage, calibration);
+
+                // Apply smoothing
+                int smoothLevel = (int)Clamp(smoothnessValue, 1, 5);
+                if (smoothLevel > 1)
+                    doses = SmoothDoseArray(doses, rawImage.PixelWidth, rawImage.PixelHeight, smoothLevel);
+
+                // Rewrite X[mm] block
+                int width = rawImage.PixelWidth;
+                double spacing = 0.4; // mm per pixel
+                var xPositions = Enumerable.Range(0, width).Select(i => i * spacing).ToList();
+                double medianX = CalculateMedian(xPositions);
+                var shiftedXmmValues = ShiftAndRoundXmmValues(xPositions, medianX);
+
+                sb = new System.Text.StringBuilder(ReplaceXValuesInOpg(sb.ToString(), shiftedXmmValues));
+
+                // Generate ASCII dose block
+                string doseBlock = GenerateDoseBlock(doses, rawImage.PixelWidth, rawImage.PixelHeight);
+
+                // Replace placeholder or append
+                string placeholder = $"#DOSE_BLOCK_{file.FileName}#";
+                if (sb.ToString().Contains(placeholder))
+                {
+                    sb.Replace(placeholder, doseBlock);
+                }
+                else
+                {
+                    sb.AppendLine($"# Image: {file.FileName}");
+                    sb.AppendLine(doseBlock);
+                    sb.AppendLine();
+                }
+
+                // Update File Name + Image Name based on current file
+                string baseName = Path.GetFileNameWithoutExtension(file.FileName);
+                string finalContent = UpdateOpgFileAndImageName(sb.ToString(), baseName);
+
+                // Save in dictionary: key = suggested filename, value = OPG content
+                results[$"{baseName}.opg"] = finalContent;
+            }
+
+            return results;
+        }
+
+
+        public static string UpdateOpgFileAndImageName(string opgContent, string baseName)
+        {
+            // File Name with .opg extension
+            string fileNameLinePattern = @"File Name:\s*.*";
+            string fileNameLineReplacement = $"File Name:          {baseName}.opg\r";
+            opgContent = Regex.Replace(opgContent, fileNameLinePattern, fileNameLineReplacement);
+
+            // Image Name without extension
+            string imageNameLinePattern = @"Image Name:\s*.*";
+            string imageNameLineReplacement = $"Image Name:         {baseName}\r";
+            opgContent = Regex.Replace(opgContent, imageNameLinePattern, imageNameLineReplacement);
+
+            return opgContent;
+        }
+
+
+        public static string Match(this string input, string pattern)
+        {
+            var m = Regex.Match(input, pattern, RegexOptions.Singleline);
+            return m.Success ? m.Value : null;
+        }
+
+
+        /// <summary>
+        /// Updates Energy and Device Type lines in the template content.
+        /// </summary>
+        private static string UpdateOpgHeader(string opgContent, string selectedLeftItem, string selectedRightItem)
+        {
+
+            if (string.IsNullOrEmpty(selectedLeftItem))
+            {
+                System.Diagnostics.Debug.WriteLine("No left item selected. Returning original OPG content.");
+                return opgContent;
+            }
+
+            // Extract nominal value and type
+            var match = Regex.Match(selectedLeftItem, @"(\d+)([XFE])");
+            if (!match.Success)
+            {
+                System.Diagnostics.Debug.WriteLine("Failed to parse selectedLeftItem. Returning original OPG content.");
+                return opgContent;
+            }
+
+            int nominal = int.Parse(match.Groups[1].Value);
+            string typeChar = match.Groups[2].Value;
+
+            System.Diagnostics.Debug.WriteLine($"Parsed nominal value: {nominal}, type: {typeChar}");
+
+            string energyStr;
+            string radType;
+
+            switch (typeChar.ToUpper())
+            {
+                case "X":
+                case "F":  // FFF photons
+                    energyStr = $"{nominal}".ToString(System.Globalization.CultureInfo.InvariantCulture) + ".00 MV";
+                    radType = "Photons";
+                    break;
+                case "E":
+                    energyStr = $"{nominal}".ToString(System.Globalization.CultureInfo.InvariantCulture) + ".00 MeV";
+                    radType = "Electrons";
+                    break;
+                default:
+                    energyStr = $"{nominal}".ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    radType = "Photons";
+                    break;
+            }
+
+
+            string energyLinePattern = @"^Energy:.*(\r?\n)?";
+            string energyLineReplacement = $"Energy:             {energyStr}\r\n";
+
+            opgContent = Regex.Replace(opgContent, energyLinePattern, energyLineReplacement, RegexOptions.Multiline);
+
+            string radTypePattern = @"^Radiation Type:.*(\r?\n)?";
+            string radTypeReplacement = $"Radiation Type:     {radType}\r\n";
+
+            opgContent = Regex.Replace(opgContent, radTypePattern, radTypeReplacement, RegexOptions.Multiline);
+
+            if (!string.IsNullOrEmpty(selectedRightItem))
+            {
+                string deviceLinePattern = @"^Device Type:.*(\r?\n)?";
+                string deviceLineReplacement = $"Device Type:         {selectedRightItem}\r\n";
+                opgContent = Regex.Replace(opgContent, deviceLinePattern, deviceLineReplacement, RegexOptions.Multiline);
+            }
+
+
+            System.Diagnostics.Debug.WriteLine("UpdateOpgHeader finished successfully.");
+            return opgContent;
+        }
+
+
+        /// <summary>
+        /// Smooths a dose array with a box filter.
+        /// </summary>
+        public static double[] SmoothDoseArray(double[] doseArray, int width, int height, int smoothLevel)
+        {
+            if (smoothLevel <= 1) return doseArray;
+
+            double[] smoothed = new double[doseArray.Length];
+            int radius = smoothLevel - 1;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    double sum = 0;
+                    int count = 0;
+
+                    for (int dy = -radius; dy <= radius; dy++)
+                    {
+                        int ny = y + dy;
+                        if (ny < 0 || ny >= height) continue;
+
+                        for (int dx = -radius; dx <= radius; dx++)
+                        {
+                            int nx = x + dx;
+                            if (nx < 0 || nx >= width) continue;
+
+                            sum += doseArray[ny * width + nx];
+                            count++;
+                        }
+                    }
+
+                    smoothed[index] = sum / count;
+                }
+            }
+
+            return smoothed;
+        }
+
+        /// <summary>
+        /// Generates the ASCII dose block for a single image.
+        /// </summary>
+        public static string GenerateDoseBlock(double[] doses, int width, int height)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    double dose = doses[y * width + x];
+                    sb.Append(dose.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture));
+                    sb.Append("\t");
+                }
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
+        private static double CalculateMedian(List<double> values)
+        {
+            var sortedValues = values.OrderBy(x => x).ToList();
+            int count = sortedValues.Count;
+
+            if (count % 2 == 0)
+                return (sortedValues[count / 2 - 1] + sortedValues[count / 2]) / 2;
+            else
+                return sortedValues[count / 2];
+        }
+
+        private static List<double> ShiftAndRoundXmmValues(List<double> values, double medianXmm)
+        {
+            return values.Select(x => Math.Round(x - medianXmm, 1)).ToList();
+        }
+
+        private static string ReplaceXValuesInOpg(string opgContent, List<double> shiftedXmmValues)
+        {
+            string pattern = @"X\[mm\](.*?)Y\[mm\]";
+            var match = Regex.Match(opgContent, pattern, RegexOptions.Singleline);
+            if (!match.Success) return opgContent;
+
+            string xBlock = match.Groups[1].Value;
+            var sb = new System.Text.StringBuilder();
+
+            foreach (var x in shiftedXmmValues)
+            {
+                string val = x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+                int len = val.Length;
+                int spacesAfterTab = 2 + (5 - len);
+                if (spacesAfterTab < 0) spacesAfterTab = 0;
+
+                sb.Append(' ')
+                  .Append('\t')
+                  .Append(new string(' ', spacesAfterTab))
+                  .Append(val);
+            }
+
+            sb.Append("\r\n");
+            return opgContent.Replace(xBlock, sb.ToString());
+        }
+
+
+ 
     }
 }

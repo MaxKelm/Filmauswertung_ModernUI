@@ -292,6 +292,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <Content Include="Resources\Muster.opg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Resource Include="Fonts\Poppins\Poppins-Black.ttf" />
     <Resource Include="Fonts\Poppins\Poppins-BlackItalic.ttf" />
     <Resource Include="Fonts\Poppins\Poppins-Bold.ttf" />
