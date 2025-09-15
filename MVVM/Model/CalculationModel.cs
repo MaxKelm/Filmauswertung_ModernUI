@@ -2,6 +2,7 @@
 using Filmauswertung_ModernUI.MVVM.ViewModel;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -36,7 +37,6 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             if (image == null || calibration == null)
                 return Array.Empty<double>();
 
-            // Convert to Bgra32 for easy channel extraction
             BitmapSource source = image;
             if (image.Format != PixelFormats.Bgra32)
                 source = new FormatConvertedBitmap(image, PixelFormats.Bgra32, null, 0);
@@ -66,12 +66,10 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
                 if (isCubicFit)
                 {
-                    // Cubic polynomial: dose = a + b*OD + c*OD^2 + d*OD^3
                     dose = coeffs[0] + coeffs[1] * od + coeffs[2] * Math.Pow(od, 2) + coeffs[3] * Math.Pow(od, 3);
                 }
                 else if (isInverseLinearFit)
                 {
-                    // Inverse-linear fit: dose = b / (OD - a) + c
                     double a = coeffs[0];
                     double b = coeffs[1];
                     double c = coeffs[2];
@@ -79,11 +77,13 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                     dose = b / (odAdjusted - a) + c;
                 }
 
-                doseArray[i] = dose;
+                doseArray[i] = Math.Max(dose, 0);
+
             }
 
             return doseArray;
         }
+
 
 
         public static BitmapImage ConvertDoseArrayToBitmap(double[] doseArray, int width, int height)
@@ -250,30 +250,48 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 if (smoothLevel > 1)
                     doses = SmoothDoseArray(doses, rawImage.PixelWidth, rawImage.PixelHeight, smoothLevel);
 
-                // Rewrite X[mm] block
+                // Use actual image DPI to calculate physical spacing
                 int width = rawImage.PixelWidth;
-                double spacing = 0.4; // mm per pixel
-                var xPositions = Enumerable.Range(0, width).Select(i => i * spacing).ToList();
+                int height = rawImage.PixelHeight;
+                double dpiX = rawImage.DpiX;
+                double dpiY = rawImage.DpiY;
+                // fallback in case DPI is missing or invalid
+                if (dpiX < 1)
+                {
+                    dpiX = 96;
+                    Debug.WriteLine("Fallback used for X dpi");
+                }
+                if (dpiY < 1)
+                {
+                    dpiY = 96;
+                    Debug.WriteLine("Fallback used for Y dpi");
+                }
+
+                double spacingXmm = 25.4 / dpiX; // mm per pixel
+                double spacingYmm = 25.4 / dpiY; // mm per pixel
+
+                if (srsResampling)
+                {
+                    double targetSpacing = 0.4; // mm per pixel for SRS
+                    doses = ResampleDoseArray(doses, width, height, spacingXmm, spacingYmm, targetSpacing);
+                    width = (int)Math.Round(width * spacingXmm / targetSpacing);
+                    height = (int)Math.Round(height * spacingYmm / targetSpacing);
+                    spacingXmm = targetSpacing;
+                    spacingYmm = targetSpacing;
+                }
+
+
+                // Rewrite X[mm] block
+                // Calculate X positions
+                var xPositions = Enumerable.Range(0, width).Select(i => i * spacingXmm).ToList();
                 double medianX = CalculateMedian(xPositions);
                 var shiftedXmmValues = ShiftAndRoundXmmValues(xPositions, medianX);
 
                 sb = new System.Text.StringBuilder(ReplaceXValuesInOpg(sb.ToString(), shiftedXmmValues));
 
-                // Generate ASCII dose block
-                string doseBlock = GenerateDoseBlock(doses, rawImage.PixelWidth, rawImage.PixelHeight);
-
-                // Replace placeholder or append
-                string placeholder = $"#DOSE_BLOCK_{file.FileName}#";
-                if (sb.ToString().Contains(placeholder))
-                {
-                    sb.Replace(placeholder, doseBlock);
-                }
-                else
-                {
-                    sb.AppendLine($"# Image: {file.FileName}");
-                    sb.AppendLine(doseBlock);
-                    sb.AppendLine();
-                }
+                // Rewrite Y[mm] block with shifted values and doses
+                sb = new System.Text.StringBuilder(
+                        ReplaceYValuesInOpg(sb.ToString(), doses, width, height, spacingYmm));
 
                 // Update File Name + Image Name based on current file
                 string baseName = Path.GetFileNameWithoutExtension(file.FileName);
@@ -332,9 +350,6 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
             int nominal = int.Parse(match.Groups[1].Value);
             string typeChar = match.Groups[2].Value;
-
-            System.Diagnostics.Debug.WriteLine($"Parsed nominal value: {nominal}, type: {typeChar}");
-
             string energyStr;
             string radType;
 
@@ -372,9 +387,6 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 string deviceLineReplacement = $"Device Type:         {selectedRightItem}\r\n";
                 opgContent = Regex.Replace(opgContent, deviceLinePattern, deviceLineReplacement, RegexOptions.Multiline);
             }
-
-
-            System.Diagnostics.Debug.WriteLine("UpdateOpgHeader finished successfully.");
             return opgContent;
         }
 
@@ -481,8 +493,78 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             sb.Append("\r\n");
             return opgContent.Replace(xBlock, sb.ToString());
         }
+        private static string ReplaceYValuesInOpg(string opgContent, double[] doses, int width, int height, double spacingYmm)
+        {
+            // Calculate Y positions using the provided spacing
+            var yPositions = Enumerable.Range(0, height).Select(i => i * spacingYmm).ToList();
+            double medianY = CalculateMedian(yPositions);
+            var shiftedYmmValues = yPositions.Select(y => Math.Round(y - medianY, 1)).ToList();
 
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine();
 
- 
+            for (int row = 0; row < height; row++)
+            {
+                string yValStr = shiftedYmmValues[row].ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+                // Y value with indentation
+                sb.Append("    ").Append(yValStr).Append(" \t");
+
+                for (int col = 0; col < width; col++)
+                {
+                    double dose = doses[row * width + col] * 1000; // scaled
+                    string doseStr = Math.Round(dose, 4).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+                    if (col == 0)
+                        sb.Append(doseStr);
+                    else
+                        sb.Append("\t").Append(doseStr);
+                }
+
+                sb.Append("\r\n");
+            }
+
+            // Replace block in OPG content
+            string pattern = @"(?<=Y\[mm\])(.*?)(?=</asciibody>)";
+            var match = Regex.Match(opgContent, pattern, RegexOptions.Singleline);
+            if (match.Success)
+                opgContent = opgContent.Replace(match.Groups[1].Value, sb.ToString());
+
+            return opgContent;
+        }
+        private static double[] ResampleDoseArray(double[] doses, int originalWidth, int originalHeight, double originalSpacingX, double originalSpacingY, double targetSpacing)
+        {
+            int newWidth = (int)Math.Round(originalWidth * originalSpacingX / targetSpacing);
+            int newHeight = (int)Math.Round(originalHeight * originalSpacingY / targetSpacing);
+
+            double[] resampled = new double[newWidth * newHeight];
+
+            for (int y = 0; y < newHeight; y++)
+            {
+                double srcY = y * targetSpacing / originalSpacingY;
+                int y0 = (int)Math.Floor(srcY);
+                int y1 = Math.Min(y0 + 1, originalHeight - 1);
+                double fy = srcY - y0;
+
+                for (int x = 0; x < newWidth; x++)
+                {
+                    double srcX = x * targetSpacing / originalSpacingX;
+                    int x0 = (int)Math.Floor(srcX);
+                    int x1 = Math.Min(x0 + 1, originalWidth - 1);
+                    double fx = srcX - x0;
+
+                    // Bilinear interpolation
+                    double dose = (1 - fx) * (1 - fy) * doses[y0 * originalWidth + x0]
+                                + fx * (1 - fy) * doses[y0 * originalWidth + x1]
+                                + (1 - fx) * fy * doses[y1 * originalWidth + x0]
+                                + fx * fy * doses[y1 * originalWidth + x1];
+
+                    resampled[y * newWidth + x] = dose;
+                }
+            }
+
+            return resampled;
+        }
+
     }
 }

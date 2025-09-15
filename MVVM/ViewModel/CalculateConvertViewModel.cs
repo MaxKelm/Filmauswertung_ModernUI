@@ -347,19 +347,21 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
             string templatePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "Muster.opg");
 
-            // Suggest base folder based on first file
-            string baseName = Path.GetFileNameWithoutExtension(FileList.First().FileName);
+            // Folder name pattern: yyyyMMdd_CalcDose
+            string datedSuffix = "CalcDose";
 
-            // Use exporter to select a folder instead of a single file
-            var exporter = new SingleFileExporter(".opg", "CalcDose");
-            string savePath = exporter.GetExportPath(baseName);
-            if (string.IsNullOrEmpty(savePath))
+            // Ask user for export folder
+            var exporter = new FolderExporter(datedSuffix);
+            string targetFolder = exporter.GetExportPath($"{DateTime.Now:yyyyMMdd}");
+            if (string.IsNullOrEmpty(targetFolder))
                 return;
 
-            // Resolve target folder (directory of selected savePath)
-            string targetFolder = Path.GetDirectoryName(savePath);
             if (!Directory.Exists(targetFolder))
                 Directory.CreateDirectory(targetFolder);
+
+            ShowToast(
+                    $"Calculating...",
+                    1);
 
             try
             {
@@ -380,7 +382,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                     File.WriteAllText(outPath, kv.Value);
                 }
 
-                // Copy folder to clipboard
+                // Copy folder path to clipboard
                 Clipboard.SetText(targetFolder);
 
                 ShowToast(
@@ -392,8 +394,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 MessageBox.Show($"Failed to save OPG files:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-
 
 
 

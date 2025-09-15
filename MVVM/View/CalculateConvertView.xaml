@@ -90,7 +90,7 @@
                     FontSize="18"
                     FontStyle="Italic"
                     Foreground="Gray"
-                    Text="Explanatory Text"
+                    Text="First load an existing calibration .json (or do one first under the calibration tab).&#x0a;Then load the .tif images that should be calculated to dose.&#x0a;Press the save button to save all doses as .opg files.&#x0a; The energy and device specified in the bottom control area will be written in the opg file.&#x0a;If SRS Resampling is activated all dose arrays will be resampled to have a 0.4mm x 0.4mm resolution.&#x0a;The smoothness can be increased (1=no smoothing) to suppress some artifacts (this can falsify the dose!).&#x0a;Press the 'X' to remove unwanted .tif from the calculation before saving.&#x0a; Files will be saved in a folder; all imported files are processed at once (with the same settings)."
                     TextAlignment="Center"
                     TextWrapping="Wrap"
                     Visibility="{Binding DisplayedImage, Converter={StaticResource InverseNullToVisibilityConverter}}" />
