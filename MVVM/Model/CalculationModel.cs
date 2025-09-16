@@ -400,40 +400,117 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         /// </summary>
         public static double[] SmoothDoseArray(double[] doseArray, int width, int height, int smoothLevel)
         {
-            if (smoothLevel <= 1) return doseArray;
+            if (smoothLevel <= 1)
+                return doseArray; // level 1 = no smoothing
+
+            // Map smoothLevel (2..5) to radius and sigma values
+            int radius;
+            double sigmaSpatial;
+            double sigmaRange;
+
+            switch (smoothLevel)
+            {
+                case 2: // minimal smoothing
+                    radius = 1;
+                    sigmaSpatial = 1.0;
+                    sigmaRange = 0.05; // sensitive to dose differences
+                    break;
+                case 3:
+                    radius = 2;
+                    sigmaSpatial = 2.0;
+                    sigmaRange = 0.1;
+                    break;
+                case 4:
+                    radius = 3;
+                    sigmaSpatial = 3.0;
+                    sigmaRange = 0.15;
+                    break;
+                case 5: // strongest smoothing
+                    radius = 4;
+                    sigmaSpatial = 4.0;
+                    sigmaRange = 0.2;
+                    break;
+                default:
+                    return doseArray;
+            }
+
+            // Precompute Gaussian spatial kernel
+            double[,] spatialKernel = GenerateGaussianKernel(radius, sigmaSpatial);
 
             double[] smoothed = new double[doseArray.Length];
-            int radius = smoothLevel - 1;
 
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
                     int index = y * width + x;
-                    double sum = 0;
-                    int count = 0;
+                    double centerValue = doseArray[index];
 
-                    for (int dy = -radius; dy <= radius; dy++)
+                    double weightedSum = 0;
+                    double weightTotal = 0;
+
+                    for (int ky = -radius; ky <= radius; ky++)
                     {
-                        int ny = y + dy;
+                        int ny = y + ky;
                         if (ny < 0 || ny >= height) continue;
 
-                        for (int dx = -radius; dx <= radius; dx++)
+                        for (int kx = -radius; kx <= radius; kx++)
                         {
-                            int nx = x + dx;
+                            int nx = x + kx;
                             if (nx < 0 || nx >= width) continue;
 
-                            sum += doseArray[ny * width + nx];
-                            count++;
+                            double neighborValue = doseArray[ny * width + nx];
+
+                            // Spatial weight from Gaussian kernel
+                            double spatialWeight = spatialKernel[ky + radius, kx + radius];
+
+                            // Range weight based on intensity difference
+                            double rangeWeight = Math.Exp(-Math.Pow(neighborValue - centerValue, 2) / (2 * sigmaRange * sigmaRange));
+
+                            // Combined bilateral weight
+                            double weight = spatialWeight * rangeWeight;
+
+                            weightedSum += neighborValue * weight;
+                            weightTotal += weight;
                         }
                     }
 
-                    smoothed[index] = sum / count;
+                    smoothed[index] = weightedSum / weightTotal;
                 }
             }
 
             return smoothed;
         }
+
+        private static double[,] GenerateGaussianKernel(int radius, double sigma)
+        {
+            int size = 2 * radius + 1;
+            double[,] kernel = new double[size, size];
+            double sum = 0;
+
+            for (int y = -radius; y <= radius; y++)
+            {
+                for (int x = -radius; x <= radius; x++)
+                {
+                    double value = Math.Exp(-(x * x + y * y) / (2 * sigma * sigma));
+                    kernel[y + radius, x + radius] = value;
+                    sum += value;
+                }
+            }
+
+            // Normalize kernel so that all weights sum to 1
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    kernel[y, x] /= sum;
+                }
+            }
+
+            return kernel;
+        }
+
+
 
         /// <summary>
         /// Generates the ASCII dose block for a single image.
