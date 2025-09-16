@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -330,6 +331,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             _currentImageIndex = FileList.Count - 1;
             UpdateDisplayedImage();
         }
+
 
         private void SaveOpg()
         {

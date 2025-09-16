@@ -293,6 +293,10 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 sb = new System.Text.StringBuilder(
                         ReplaceYValuesInOpg(sb.ToString(), doses, width, height, spacingYmm));
 
+                // Update header with correct grid dimensions
+                sb = new System.Text.StringBuilder(UpdateRowsAndColumns(sb.ToString(), width, height));
+
+
                 // Update File Name + Image Name based on current file
                 string baseName = Path.GetFileNameWithoutExtension(file.FileName);
                 string finalContent = UpdateOpgFileAndImageName(sb.ToString(), baseName);
@@ -564,6 +568,23 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             }
 
             return resampled;
+        }
+
+        private static string UpdateRowsAndColumns(string opgContent, int width, int height)
+        {
+            // Replace "No. of Columns" line
+            opgContent = Regex.Replace(
+                opgContent,
+                @"No\. of Columns:\s*\d+",
+                $"No. of Columns:     {width}");
+
+            // Replace "No. of Rows" line
+            opgContent = Regex.Replace(
+                opgContent,
+                @"No\. of Rows:\s*\d+",
+                $"No. of Rows:        {height}");
+
+            return opgContent;
         }
 
     }
