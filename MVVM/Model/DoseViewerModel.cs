@@ -45,7 +45,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         public double ReferenceDose { get; set; } = 1.0;
 
         // Selected options from UI
-        public string SelectedBackgroundColor { get; set; } = "White";
+        public string SelectedBackgroundColor { get; set; } = "Transparent";
         public string SelectedGradientMode { get; set; } = "Default";
 
         // Display mode flags
@@ -59,7 +59,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         // -----------------------------
         public List<string> BackgroundColorOptions { get; } = new List<string>
         {
-            "LightGray", "White", "Black", "LightBlue", "Transparent"
+            "LightGray", "White","Transparent", "Black", "LightBlue"
         };
 
         public List<string> GradientModes { get; } = new List<string>

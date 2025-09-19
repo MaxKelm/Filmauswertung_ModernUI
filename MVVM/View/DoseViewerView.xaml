@@ -33,28 +33,22 @@
             </Grid.ColumnDefinitions>
 
             <!--  Left: Helix Viewer  -->
-            <Border
-                Grid.Column="0"
-                Margin="10"
-                Background="Transparent"
-                BorderBrush="#FFCCCCCC"
-                BorderThickness="1"
-                CornerRadius="2">
-                <HelixToolkit:HelixViewport3D
-                    x:Name="PlotViewport"
-                    Background="LightGray"
-                    ZoomExtentsWhenLoaded="True">
-                    <HelixToolkit:SunLight />
-                    <ModelVisual3D x:Name="SurfaceModel" />
-                    <HelixToolkit:CoordinateSystemVisual3D x:Name="Axis" />
-                </HelixToolkit:HelixViewport3D>
-            </Border>
+            <HelixToolkit:HelixViewport3D
+                x:Name="PlotViewport"
+                Background="{Binding BackgroundBrush}"
+                ZoomExtentsWhenLoaded="True">
+                <HelixToolkit:SunLight />
+                <ModelVisual3D Content="{Binding DisplayModelGroup}" />
+                <HelixToolkit:CoordinateSystemVisual3D x:Name="Axis" />
+            </HelixToolkit:HelixViewport3D>
+
 
             <!--  Right: Buttons  -->
             <StackPanel
                 Grid.Column="1"
                 Margin="10"
                 VerticalAlignment="Top">
+
                 <Button
                     Height="50"
                     Margin="0,10,0,20"
@@ -78,8 +72,19 @@
                     extensions:Extensions.Icon="🧊"
                     Command="{Binding Export3DCommand}"
                     Content="Export 3D Model"
+                    IsEnabled="False"
+                    Style="{StaticResource DynamicButton}" />
+
+                <!--  Screenshot button  -->
+                <Button
+                    Height="50"
+                    Margin="0,0,0,20"
+                    extensions:Extensions.Icon="📸"
+                    Command="{Binding TakeScreenshotCommand}"
+                    Content="Screenshot"
                     Style="{StaticResource DynamicButton}" />
             </StackPanel>
+
         </Grid>
 
         <!--  Bottom controls  -->
@@ -101,6 +106,7 @@
                     FontWeight="DemiBold"
                     Foreground="LightGray"
                     Text="Compare Method" />
+
                 <RadioButton
                     Margin="0,5,0,0"
                     Content="Single Display"
@@ -108,23 +114,24 @@
                     GroupName="CompareMethods"
                     IsChecked="{Binding IsSingleDisplay}"
                     Style="{StaticResource ToolbarButtons}" />
+
                 <RadioButton
                     Margin="0,5,0,0"
                     Content="Dual Display"
                     Foreground="LightGray"
                     GroupName="CompareMethods"
                     IsChecked="{Binding IsDualDisplay}"
-                    IsEnabled="False"
                     Style="{StaticResource ToolbarButtons}" />
+
                 <RadioButton
                     Margin="0,5,0,0"
                     Content="Dose Difference"
                     Foreground="LightGray"
                     GroupName="CompareMethods"
                     IsChecked="{Binding IsDoseDifference}"
-                    IsEnabled="False"
                     Style="{StaticResource ToolbarButtons}" />
             </StackPanel>
+
 
             <!--  Background Colors  -->
             <StackPanel

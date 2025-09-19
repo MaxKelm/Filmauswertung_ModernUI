@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Filmauswertung_ModernUI.MVVM.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,12 @@ namespace Filmauswertung_ModernUI.MVVM.View
         public DoseViewerView()
         {
             InitializeComponent();
+            var vm = (DoseViewerViewModel)DataContext;
+
+            // Assign the zoom action
+            vm.ZoomToFitAction = () => Dispatcher.Invoke(() => PlotViewport.ZoomExtents());
+            vm.Viewport = PlotViewport;
+
         }
     }
 }
