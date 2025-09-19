@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
 
 namespace Filmauswertung_ModernUI.MVVM.Model
 {
-    /// <summary>
-    /// Represents a loaded OPG dose file with grid and pixel data.
-    /// </summary>
     public class OpgFileData
     {
         public string ImageName { get; set; }
@@ -20,43 +20,29 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         public List<double> X { get; set; } = new List<double>();
         public List<double> Y { get; set; } = new List<double>();
         public List<List<double>> PixelValues { get; set; } = new List<List<double>>();
+
+        public static double ComputeZScale(OpgFileData data)
+        {
+            double xRange = data.X.Last() - data.X.First();
+            double yRange = data.Y.Last() - data.Y.First();
+            double zRange = data.PixelValues.SelectMany(r => r).Max() - data.PixelValues.SelectMany(r => r).Min();
+            return zRange > 0 ? Math.Min(xRange, yRange) / zRange * 0.5 : 1.0;
+        }
     }
 
-    /// <summary>
-    /// Model storing all dose viewer related data and UI state.
-    /// </summary>
     internal class DoseViewerModel
     {
-        // -----------------------------
-        // File paths
-        // -----------------------------
         public string ReferenceFilePath { get; set; }
         public string CompareFilePath { get; set; }
 
-        // -----------------------------
-        // Loaded data
-        // -----------------------------
         public OpgFileData ReferenceData { get; set; }
         public OpgFileData CompareData { get; set; }
 
-        // -----------------------------
-        // Display settings
-        // -----------------------------
         public double ReferenceDose { get; set; } = 1.0;
-
-        // Selected options from UI
         public string SelectedBackgroundColor { get; set; } = "Transparent";
         public string SelectedGradientMode { get; set; } = "Default";
 
-        // Display mode flags
-        public bool IsSingleDisplay { get; set; } = true;
-        public bool IsDualDisplay { get; set; }
-        public bool IsDoseDifference { get; set; }
-        public bool IsGammaEvaluation { get; set; }
-
-        // -----------------------------
-        // UI binding options (static)
-        // -----------------------------
+        // UI Options (static)
         public List<string> BackgroundColorOptions { get; } = new List<string>
         {
             "LightGray", "White","Transparent", "Black", "LightBlue"
@@ -64,7 +50,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
         public List<string> GradientModes { get; } = new List<string>
         {
-            "Default", "Bipolar", "Stepped"
+            "Default", "Bipolar", "Stepped", "Uniform", 
         };
     }
 }

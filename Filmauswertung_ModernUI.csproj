@@ -14,6 +14,9 @@
     <WarningLevel>4</WarningLevel>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -26,11 +29,8 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -150,6 +150,7 @@
     <Compile Include="Converters\VisibilityConverter.cs" />
     <Compile Include="Core\Extensions.cs" />
     <Compile Include="Core\Interfaces\IImageService.cs" />
+    <Compile Include="Core\Interfaces\IOpgLoader.cs" />
     <Compile Include="Core\Interfaces\IToastService.cs" />
     <Compile Include="Core\ObservableObject.cs" />
     <Compile Include="Core\RelayCommand.cs" />
@@ -166,11 +167,13 @@
     <Compile Include="MVVM\View\ViewCutRotateViews\GlueView.xaml.cs">
       <DependentUpon>GlueView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Services\DoseVisualiser.cs" />
     <Compile Include="Services\Exporter.cs" />
     <Compile Include="Services\ImageProcessingService.cs" />
     <Compile Include="Services\ImageSegmentationService.cs" />
     <Compile Include="Services\ImageService.cs" />
     <Compile Include="Services\Importer.cs" />
+    <Compile Include="Services\OpgLoader.cs" />
     <Compile Include="Services\SliderHelper.cs" />
     <Compile Include="Services\ToastService.cs" />
     <Compile Include="Services\ToggleSwitchHelper.cs" />
