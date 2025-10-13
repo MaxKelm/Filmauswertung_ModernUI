@@ -106,7 +106,7 @@
                     Tag="20,0,0,0" />
                 <RadioButton
                     Height="50"
-                    extensions:Extensions.Icon="&#129482;"
+                    extensions:Extensions.Icon="🔮"
                     Command="{Binding ViewDoseViewerCommand}"
                     Content="3D Dose Viewer"
                     FontSize="14"

@@ -69,7 +69,7 @@
                 <Button
                     Height="50"
                     Margin="0,0,0,20"
-                    extensions:Extensions.Icon="🧊"
+                    extensions:Extensions.Icon="🔮"
                     Command="{Binding Export3DCommand}"
                     Content="Export 3D Model"
                     IsEnabled="False"

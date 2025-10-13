@@ -33,7 +33,7 @@
             Grid.Column="0"
             Margin="2"
             Padding="10,5"
-            extensions:Extensions.Icon="🧩"
+            extensions:Extensions.Icon="🔗"
             Command="{Binding SelectGlueCommand}"
             Content="Glue"
             Style="{StaticResource ToolbarButtons}" />
