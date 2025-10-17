@@ -44,6 +44,24 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
         // -----------------------------
         // Image display & navigation
         // -----------------------------
+        // Hovered pixel
+        private string _currentPixelValue;
+        public string CurrentPixelValue
+        {
+            get => _currentPixelValue;
+            set => SetProperty(ref _currentPixelValue, value);
+        }
+
+        private bool _isPixelHovered;
+        public bool IsPixelHovered
+        {
+            get => _isPixelHovered;
+            set => SetProperty(ref _isPixelHovered, value);
+        }
+        public RelayCommand MouseOverImageCommand { get; set; }
+        public RelayCommand MouseLeaveImageCommand { get; set; }
+
+
         private bool _isCalibrationLoaded;
         public bool IsCalibrationLoaded
         {
@@ -168,6 +186,47 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             LoadCalibrationCommand = new RelayCommand(_ => LoadCalibration());
             LoadMeasurementsCommand = new RelayCommand(_ => LoadMeasurements(), _ => IsCalibrationLoaded);
             SaveOpgCommand = new RelayCommand(_ => SaveOpg());
+            
+            MouseOverImageCommand = new RelayCommand(param =>
+            {
+                if (param is Point point)
+                    UpdatePixelHover(point);
+            });
+
+            MouseLeaveImageCommand = new RelayCommand(_ =>
+            {
+                IsPixelHovered = false;
+            });
+
+        }
+
+        private void UpdatePixelHover(Point point)
+        {
+            if (DisplayedImage == null || CurrentDoseValues == null || CurrentDoseValues.Length == 0)
+            {
+                IsPixelHovered = false;
+                return;
+            }
+
+            // Map mouse position to image pixel coordinates
+            var img = DisplayedImage;
+            double scaleX = img.PixelWidth / (double)img.Width;
+            double scaleY = img.PixelHeight / (double)img.Height;
+
+            int x = Math.Min((int)(point.X * scaleX), img.PixelWidth - 1);
+            int y = Math.Min((int)(point.Y * scaleY), img.PixelHeight - 1);
+
+            int index = y * img.PixelWidth + x;
+
+            if (index >= 0 && index < CurrentDoseValues.Length)
+            {
+                CurrentPixelValue = CurrentDoseValues[index].ToString("F2");
+                IsPixelHovered = true;
+            }
+            else
+            {
+                IsPixelHovered = false;
+            }
         }
 
         // -----------------------------

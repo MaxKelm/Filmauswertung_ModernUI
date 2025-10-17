@@ -2,6 +2,8 @@
     x:Class="Filmauswertung_ModernUI.MVVM.View.CalculateConvertView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behavior="clr-namespace:Filmauswertung_ModernUI.Behaviors"
+    xmlns:converters="clr-namespace:Filmauswertung_ModernUI.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -15,6 +17,9 @@
     <UserControl.DataContext>
         <viewModel:CalculateConvertViewModel />
     </UserControl.DataContext>
+    <UserControl.Resources>
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -81,9 +86,22 @@
                     <Image
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
+                        behavior:MouseMoveBehavior.MouseLeaveCommand="{Binding MouseLeaveImageCommand}"
+                        behavior:MouseMoveBehavior.MouseMoveCommand="{Binding MouseOverImageCommand}"
                         Source="{Binding DisplayedImage}"
                         Stretch="None" />
                 </Viewbox>
+                <!--  Label to show pixel value  -->
+                <TextBlock
+                    Padding="4"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="Transparent"
+                    Foreground="GreenYellow"
+                    Opacity="0.7"
+                    Text="{Binding CurrentPixelValue, StringFormat='Pixel: {0:F2} Gy'}"
+                    Visibility="{Binding IsPixelHovered, Converter={StaticResource BoolToVisibilityConverter}}" />
+
                 <!--  Placeholder message when no image is loaded  -->
                 <TextBlock
                     HorizontalAlignment="Center"
