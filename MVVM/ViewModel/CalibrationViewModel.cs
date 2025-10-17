@@ -57,6 +57,29 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             set => SetProperty(ref _selectedUnit, value);
         }
 
+        public ObservableCollection<string> TimeUnits { get; } = new ObservableCollection<string>
+        {
+            "Hour(s)",
+            "Day(s)",
+            "Week(s)"
+        };
+
+        private string _selectedTimeUnit = "Day(s)";
+        public string SelectedTimeUnit
+        {
+            get => _selectedTimeUnit;
+            set => SetProperty(ref _selectedTimeUnit, value);
+        }
+
+
+        private int _selectedTimeInterval = 1;
+        public int SelectedTimeInterval
+        {
+            get => _selectedTimeInterval;
+            set => SetProperty(ref _selectedTimeInterval, value);
+        }
+
+
         private bool _usePolynomialFit = true;
         public bool UsePolynomialFit
         {
@@ -124,25 +147,49 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
             _successfulSaveCount++;
             string dateString = DateTime.Now.ToString("yyyy-MM-dd");
-            string fileName = $"calibration_{dateString}";
-
-            var exporter = new SingleFileExporter(".json", suggestedSuffix: _successfulSaveCount.ToString());
+            string fitFunction = UsePolynomialFit ? "Poly3rdDegr" : "InverseLinear";
+            string timeInterval = $"{SelectedTimeInterval}-{SelectedTimeUnit}";
+            string fileName = $"FilmCal_{fitFunction}_{timeInterval}_{dateString}";
+   
+            var exporter = new SingleFileExporter(".json", suggestedSuffix: $"v{_successfulSaveCount}");
             string exportPath = exporter.GetExportPath(fileName);
             if (string.IsNullOrWhiteSpace(exportPath))
                 return;
 
             try
-            {
+            {   
+                string formula;
+
+                if (UsePolynomialFit)
+                {
+                    // dose = a0 + a1*OD + a2*OD^2 + a3*OD^3
+                    formula = "dose = a0 + a1*OD + a2*OD^2 + a3*OD^3";
+                }
+                else
+                {
+                    // dose = c + b / (OD - a)
+                    formula = "dose = a2 + a1 / (OD - a0)";
+                }
+
                 var calibrationInfo = new
                 {
                     FileName = fileName,
-                    CalibrationValues = CalibrationInputText,
                     Unit = SelectedUnit,
-                    BackgroundMedian = _lastBackgroundMedian,
-                    PolynomialFitCoefficients = _lastPolynomialCoefficients
+                    BackgroundTransmittance = _lastBackgroundMedian,
+                    CalibrationDose = _lastDoseValues,
+                    CalibrationOD = _lastOdValues,
+                    FitFunction = fitFunction,
+                    FitCoefficients = _lastPolynomialCoefficients,
+                    Formula = formula,
+                    TimeInterval = SelectedTimeInterval,
+                    TimeUnit = SelectedTimeUnit
                 };
 
-                string json = JsonSerializer.Serialize(calibrationInfo, new JsonSerializerOptions { WriteIndented = true });
+                string json = JsonSerializer.Serialize(calibrationInfo, new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                });
                 File.WriteAllText(exportPath, json);
 
                 string folderPath = Path.GetDirectoryName(exportPath);
@@ -156,6 +203,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 MessageBox.Show($"Export failed:\n{ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
 
         private void RemoveSelected()
         {
@@ -324,7 +372,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                     double b = coefficients[1];
                     double c = coefficients[2];
                     double xAdjusted = Math.Abs(x - a) < 1e-12 ? x + 1e-12 : x; // avoid division by zero
-                    y = c + b / (xAdjusted - a); // INVERTED formula: Dose = c + b / (OD - a)
+                    y = c + b / (xAdjusted - a); // INVERTED formula: Dose = a2 + a1 / (OD - a0)
                 }
                 else
                 {

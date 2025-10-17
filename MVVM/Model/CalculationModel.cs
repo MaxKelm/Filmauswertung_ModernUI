@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -14,17 +16,30 @@ namespace Filmauswertung_ModernUI.MVVM.Model
     public class Calibration
     {
         public string FileName { get; set; }
-        public string CalibrationValues { get; set; }
-        public string Unit { get; set; }
-        public double BackgroundMedian { get; set; }
-        public double[] PolynomialFitCoefficients { get; set; }
 
-        [System.Text.Json.Serialization.JsonIgnore]
-        public double[] ParsedCalibrationValues =>
-            CalibrationValues?
-            .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(v => double.Parse(v.Trim(), System.Globalization.CultureInfo.InvariantCulture))
-            .ToArray() ?? Array.Empty<double>();
+        public string Unit { get; set; }
+
+        public double BackgroundTransmittance { get; set; }
+
+        // Matches JSON property "CalibrationDose"
+        public double[] CalibrationDose { get; set; }
+
+        // Matches JSON property "CalibrationOD"
+        public double[] CalibrationOD { get; set; }
+
+        public string FitFunction { get; set; }
+
+        public double[] FitCoefficients { get; set; }
+
+        public string Formula { get; set; }
+
+        // New JSON fields
+        public double TimeInterval { get; set; }
+        public string TimeUnit { get; set; }
+
+        // Convenience property to access calibration dose values as double[]
+        [JsonIgnore]
+        public double[] ParsedCalibrationDose => CalibrationDose ?? Array.Empty<double>();
     }
 
     internal static class CalculationModel
@@ -48,7 +63,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
             source.CopyPixels(pixels, stride, 0);
 
             double[] doseArray = new double[width * height];
-            double[] coeffs = calibration.PolynomialFitCoefficients;
+            double[] coeffs = calibration.FitCoefficients;
 
             bool isCubicFit = coeffs != null && coeffs.Length == 4;
             bool isInverseLinearFit = coeffs != null && coeffs.Length == 3;
@@ -58,7 +73,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 int idx = i * 4;
                 double redValue = pixels[idx + 2]; // R in BGRA
                 double normalized = redValue / 255.0;
-                double transmittance = normalized / calibration.BackgroundMedian;
+                double transmittance = normalized / calibration.BackgroundTransmittance;
                 transmittance = Math.Max(transmittance, 1e-6); // avoid log(0)
                 double od = -Math.Log10(transmittance);
 
@@ -190,14 +205,14 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         /// <param name="templatePath">Full path to the Muster.opg template</param>
         /// <returns>Final OPG content as string</returns>
         public static Dictionary<string, string> GenerateOpgFiles(
-            IEnumerable<FileEntry> fileList,
-            IImageService imageService,
-            Calibration calibration,
-            double smoothnessValue,
-            string templatePath,
-            string selectedLeftItem,
-            string selectedRightItem,
-            bool srsResampling)
+    IEnumerable<FileEntry> fileList,
+    IImageService imageService,
+    Calibration calibration,
+    double smoothnessValue,
+    string templatePath,
+    string selectedLeftItem,
+    string selectedRightItem,
+    bool srsResampling)
         {
             if (!File.Exists(templatePath))
                 throw new FileNotFoundException("OPG template not found.", templatePath);
@@ -215,6 +230,35 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
                 // Update Energy, Device Type, and Radiation Type
                 sb = new System.Text.StringBuilder(UpdateOpgHeader(sb.ToString(), selectedLeftItem, selectedRightItem));
+
+                // Inject calibration metadata into Operators Note (single line)
+                // Convert FitCoefficients array to comma-separated string
+                string fitCoeffsStr = calibration.FitCoefficients != null
+                    ? string.Join(", ", calibration.FitCoefficients.Select(c => c.ToString("G17", System.Globalization.CultureInfo.InvariantCulture)))
+                    : "N/A";
+
+                // Build the Operators Note content
+                // Build the Operators Note content
+                string calibrationInfo =
+                    $"Formula: {calibration.Formula}; " +
+                    $"Fit Coefficients: [{fitCoeffsStr}]; " +
+                    $"Time Interval: {calibration.TimeInterval}; " +
+                    $"Time Unit: {calibration.TimeUnit}; " +
+                    $"Background Transmittance (Calibration): {calibration.BackgroundTransmittance}; " +
+                    $"SRS Resampling: {(srsResampling ? "Yes" : "No")}; " +
+                    $"Smoothness Level: {smoothnessValue}";
+
+
+
+                // Match the Operators Note line
+                string operatorsNotePattern = @"Operators Note:\s*";
+                var matchOp = Regex.Match(sb.ToString(), operatorsNotePattern, RegexOptions.Singleline);
+
+                if (matchOp.Success)
+                {
+                    // Replace the whole line with a single line containing the calibration info
+                    sb.Replace(matchOp.Value, $"Operators Note:     {calibrationInfo}\r\n");
+                }
 
                 // Determine if FFF mode is active
                 bool isFFF = false;
@@ -255,24 +299,15 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 int height = rawImage.PixelHeight;
                 double dpiX = rawImage.DpiX;
                 double dpiY = rawImage.DpiY;
-                // fallback in case DPI is missing or invalid
-                if (dpiX < 1)
-                {
-                    dpiX = 96;
-                    Debug.WriteLine("Fallback used for X dpi");
-                }
-                if (dpiY < 1)
-                {
-                    dpiY = 96;
-                    Debug.WriteLine("Fallback used for Y dpi");
-                }
+                if (dpiX < 1) dpiX = 96;
+                if (dpiY < 1) dpiY = 96;
 
-                double spacingXmm = 25.4 / dpiX; // mm per pixel
-                double spacingYmm = 25.4 / dpiY; // mm per pixel
+                double spacingXmm = 25.4 / dpiX;
+                double spacingYmm = 25.4 / dpiY;
 
                 if (srsResampling)
                 {
-                    double targetSpacing = 0.4; // mm per pixel for SRS
+                    double targetSpacing = 0.4;
                     doses = ResampleDoseArray(doses, width, height, spacingXmm, spacingYmm, targetSpacing);
                     width = (int)Math.Round(width * spacingXmm / targetSpacing);
                     height = (int)Math.Round(height * spacingYmm / targetSpacing);
@@ -280,28 +315,25 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                     spacingYmm = targetSpacing;
                 }
 
-
                 // Rewrite X[mm] block
-                // Calculate X positions
                 var xPositions = Enumerable.Range(0, width).Select(i => i * spacingXmm).ToList();
                 double medianX = CalculateMedian(xPositions);
                 var shiftedXmmValues = ShiftAndRoundXmmValues(xPositions, medianX);
-
                 sb = new System.Text.StringBuilder(ReplaceXValuesInOpg(sb.ToString(), shiftedXmmValues));
 
-                // Rewrite Y[mm] block with shifted values and doses
-                sb = new System.Text.StringBuilder(
-                        ReplaceYValuesInOpg(sb.ToString(), doses, width, height, spacingYmm));
+                // Rewrite Y[mm] block
+                sb = new System.Text.StringBuilder(ReplaceYValuesInOpg(sb.ToString(), doses, width, height, spacingYmm));
 
-                // Update header with correct grid dimensions
+                // Update grid dimensions
                 sb = new System.Text.StringBuilder(UpdateRowsAndColumns(sb.ToString(), width, height));
 
-
-                // Update File Name + Image Name based on current file
+                // Update File Name + Image Name
                 string baseName = Path.GetFileNameWithoutExtension(file.FileName);
-                string finalContent = UpdateOpgFileAndImageName(sb.ToString(), baseName);
+                // Build additional name info for Image Name
+                // Build additional name info for Image Name
+                string additionalName = $"Fit[{calibration.FitFunction}]_Res[{spacingXmm:0.##}x{spacingYmm:0.##}mm]";
+                string finalContent = UpdateOpgFileAndImageName(sb.ToString(), baseName, additionalName);
 
-                // Save in dictionary: key = suggested filename, value = OPG content
                 results[$"{baseName}.opg"] = finalContent;
             }
 
@@ -309,7 +341,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         }
 
 
-        public static string UpdateOpgFileAndImageName(string opgContent, string baseName)
+        public static string UpdateOpgFileAndImageName(string opgContent, string baseName, string additionalName)
         {
             // File Name with .opg extension
             string fileNameLinePattern = @"File Name:\s*.*";
@@ -318,7 +350,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
             // Image Name without extension
             string imageNameLinePattern = @"Image Name:\s*.*";
-            string imageNameLineReplacement = $"Image Name:         {baseName}\r";
+            string imageNameLineReplacement = $"Image Name:         {baseName}_{additionalName}\r";
             opgContent = Regex.Replace(opgContent, imageNameLinePattern, imageNameLineReplacement);
 
             return opgContent;
@@ -613,7 +645,7 @@ namespace Filmauswertung_ModernUI.MVVM.Model
 
             return opgContent;
         }
-        private static double[] ResampleDoseArray(double[] doses, int originalWidth, int originalHeight, double originalSpacingX, double originalSpacingY, double targetSpacing)
+        public static double[] ResampleDoseArray(double[] doses, int originalWidth, int originalHeight, double originalSpacingX, double originalSpacingY, double targetSpacing)
         {
             int newWidth = (int)Math.Round(originalWidth * originalSpacingX / targetSpacing);
             int newHeight = (int)Math.Round(originalHeight * originalSpacingY / targetSpacing);

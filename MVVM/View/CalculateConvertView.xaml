@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:extensions="clr-namespace:Filmauswertung_ModernUI.Core"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toggle="clr-namespace:Filmauswertung_ModernUI.Services"
     xmlns:viewModel="clr-namespace:Filmauswertung_ModernUI.MVVM.ViewModel"
     d:DesignHeight="600"
     d:DesignWidth="1000"
@@ -162,6 +163,16 @@
                     Command="{Binding SaveOpgCommand}"
                     Content="Save .opg"
                     Style="{StaticResource DynamicButton}" />
+                <ToggleButton
+                    Height="50"
+                    Margin="0,10,0,0"
+                    toggle:ToggleSwitchHelper.IconChecked="📤"
+                    toggle:ToggleSwitchHelper.IconUnchecked="🗂"
+                    toggle:ToggleSwitchHelper.LabelChecked="OPG Export"
+                    toggle:ToggleSwitchHelper.LabelUnchecked="Array Export"
+                    IsChecked="{Binding IsOpgExport, Mode=TwoWay}"
+                    Style="{StaticResource DynamicToggleButton}" />
+
                 <!--  Dynamic Label for Dose Info  -->
                 <TextBlock
                     Margin="0,20,0,0"

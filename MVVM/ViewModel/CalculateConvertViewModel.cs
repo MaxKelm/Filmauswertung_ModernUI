@@ -147,6 +147,13 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             set => SetProperty(ref _selectedRightItem, value);
         }
 
+        private bool _isOpgExport = true;
+        public bool IsOpgExport
+        {
+            get => _isOpgExport;
+            set => SetProperty(ref _isOpgExport, value);
+        }
+
         // -----------------------------
         // Constructor
         // -----------------------------
@@ -303,7 +310,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
                 if (calibration == null) return;
 
-                if (!calibration.ParsedCalibrationValues.Any(v => v == 0))
+                if (!calibration.CalibrationDose.Any(v => v == 0))
                 {
                     ShowToast("One calibration value must be zero (e.g., 0, 0.0)", 2);
                     return;
@@ -334,6 +341,120 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
 
 
         private void SaveOpg()
+        {
+            if (IsOpgExport)
+            {
+                SaveOpgExport();
+            }
+            else
+            {
+                SaveArray();
+            }
+        }
+
+        private void SaveArray()
+        {
+            if (!FileList.Any())
+            {
+                MessageBox.Show("No measurement images loaded.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (CurrentCalibration == null)
+            {
+                MessageBox.Show("No calibration loaded. Cannot calculate doses.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var exporter = new FolderExporter("CalcDose");
+            string targetFolder = exporter.GetExportPath($"{DateTime.Now:yyyyMMdd}");
+            if (string.IsNullOrEmpty(targetFolder))
+                return;
+
+            if (!Directory.Exists(targetFolder))
+                Directory.CreateDirectory(targetFolder);
+
+            ShowToast("Exporting dose arrays as JSON...", 1);
+
+            try
+            {
+                foreach (var file in FileList)
+                {
+                    if (!File.Exists(file.FullPath))
+                        continue;
+
+                    var rawImage = _imageService.LoadImage(file.FullPath);
+                    var doses = CalculationModel.ExtractDoseFromImage(rawImage, CurrentCalibration);
+
+                    int smoothLevel = (int)Clamp(SmoothnessValue, 1, 5);
+                    if (smoothLevel > 1)
+                        doses = CalculationModel.SmoothDoseArray(doses, rawImage.PixelWidth, rawImage.PixelHeight, smoothLevel);
+
+                    double spacingXmm = 25.4 / rawImage.DpiX;
+                    double spacingYmm = 25.4 / rawImage.DpiY;
+
+                    if (_srsResampling)
+                    {
+                        double targetSpacing = 0.4;
+                        doses = CalculationModel.ResampleDoseArray(doses, rawImage.PixelWidth, rawImage.PixelHeight, spacingXmm, spacingYmm, targetSpacing);
+                        spacingXmm = targetSpacing;
+                        spacingYmm = targetSpacing;
+                    }
+                    string outPath = Path.Combine(targetFolder, Path.ChangeExtension(file.FileName, ".json"));
+
+                    var doses2D = new double[rawImage.PixelHeight][];
+                    for (int y = 0; y < rawImage.PixelHeight; y++)
+                    {
+                        doses2D[y] = new double[rawImage.PixelWidth];
+                        for (int x = 0; x < rawImage.PixelWidth; x++)
+                            doses2D[y][x] = doses[y * rawImage.PixelWidth + x];
+                    }
+
+                    // Build JSON string for Doses_Gy with each inner array on one line
+                    var sbDoses = new System.Text.StringBuilder();
+                    sbDoses.Append("[\n");
+                    for (int y = 0; y < doses2D.Length; y++)
+                    {
+                        sbDoses.Append("  [");
+                        sbDoses.Append(string.Join(", ", doses2D[y]));
+                        sbDoses.Append("]");
+                        if (y < doses2D.Length - 1)
+                            sbDoses.Append(",\n");
+                        else
+                            sbDoses.Append("\n");
+                    }
+                    sbDoses.Append("]");
+
+                    // Create export object without Doses_Gy
+                    var exportObj = new
+                    {
+                        FileName = file.FileName,
+                        Width = rawImage.PixelWidth,
+                        Height = rawImage.PixelHeight,
+                        Resolution_mm = new { X = spacingXmm, Y = spacingYmm },
+                        Doses_Gy = "__DOSES_PLACEHOLDER__"
+                    };
+
+                    // Serialize outer object with indentation
+                    string json = JsonSerializer.Serialize(exportObj, new JsonSerializerOptions { WriteIndented = true });
+
+                    // Replace placeholder with custom Doses_Gy
+                    json = json.Replace("\"__DOSES_PLACEHOLDER__\"", sbDoses.ToString());
+
+                    File.WriteAllText(outPath, json);
+                }
+
+                Clipboard.SetText(targetFolder);
+                ShowToast($"JSON export completed for {FileList.Count} files.\nFolder copied to clipboard.", 1);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to export JSON files:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+
+        private void SaveOpgExport()
         {
             if (!FileList.Any())
             {
@@ -396,8 +517,6 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 MessageBox.Show($"Failed to save OPG files:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-
 
         private static double Clamp(double value, double min, double max)
         {

@@ -24,5 +24,9 @@ namespace Filmauswertung_ModernUI.MVVM.View
         {
             InitializeComponent();
         }
+        private void NumericOnly(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !int.TryParse(e.Text, out _);
+        }
     }
 }
