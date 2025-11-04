@@ -245,7 +245,7 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
                 }
 
                 // Convert to Gy (C# 7.3 compatible)
-                switch (SelectedUnit)
+                switch (SelectedUnit)                                  //TODO: FIX unit selection
                 {
                     case "Gy":
                         // no conversion needed
