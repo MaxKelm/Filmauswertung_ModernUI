@@ -280,8 +280,17 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             var odValues = odResult.OdValues;
             var backgroundMedian = odResult.BackgroundTransmittance;
 
+            // Calibration values and image optical densities are intentionally ranked
+            // independently: their matching is established here by dose/OD order.
             var sortedDoseValues = doseValues.OrderBy(x => x).ToList();
             var sortedOdValues = odValues.OrderBy(x => x).ToList();
+
+            int minimumPoints = UsePolynomialFit ? 4 : 3;
+            if (sortedOdValues.Count < minimumPoints)
+            {
+                ShowToast($"The selected fit requires at least {minimumPoints} calibration images.");
+                return;
+            }
 
             var coefficients = new double[0];
             if (UsePolynomialFit)
@@ -292,9 +301,14 @@ namespace Filmauswertung_ModernUI.MVVM.ViewModel
             }
             else
             {
-                // Inverse-linear fit: y = a + b / (x - c)
+                // Inverse-linear fit: dose = a2 + a1 / (OD - a0)
                 coefficients = CalibrationModel.FitInverseLinear(sortedOdValues, sortedDoseValues);
-                ShowToast($"Hyperbola Fit: dose = ({coefficients[0]:F4} + {coefficients[1]:F4}) / (od - {coefficients[2]:F4})", 2);
+                if (coefficients == null)
+                {
+                    ShowToast("The inverse-linear fit did not converge. Please check the calibration points.");
+                    return;
+                }
+                ShowToast($"Hyperbola Fit: dose = {coefficients[2]:F4} + {coefficients[1]:F4} / (OD - {coefficients[0]:F4})", 2);
             }
 
             UpdateCalibrationPlot(sortedOdValues, sortedDoseValues, coefficients);

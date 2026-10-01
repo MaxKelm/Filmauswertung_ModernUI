@@ -13,19 +13,9 @@ public class ImageProcessingService : IImageProcessingService
             throw new ArgumentNullException(nameof(sourceImage));
         }
 
-        try
-        {
-            double factor = (contrastLevel - 1) / 3.0;  // factor from 0 to 1
-
-            BitmapSource enhanced = EnhanceContrast(sourceImage, factor);
-
-            BitmapImage result = BitmapSourceToBitmapImage(enhanced);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw;
-        }
+        double factor = Math.Max(0, Math.Min(1, (contrastLevel - 1) / 3.0));  // factor from 0 to 1
+        BitmapSource enhanced = EnhanceContrast(sourceImage, factor);
+        return BitmapSourceToBitmapImage(enhanced);
     }
 
     private BitmapSource EnhanceContrast(BitmapSource source, double factor)
@@ -74,7 +64,10 @@ public class ImageProcessingService : IImageProcessingService
             double totalPixels = width * height;
             for (int i = 0; i < 256; i++)
             {
-                double value = (cdf[c][i] - cdfMin) / (totalPixels - cdfMin);
+                // A uniform image has totalPixels == cdfMin. Keep its original
+                // values instead of producing a division by zero / invalid LUT.
+                double denominator = totalPixels - cdfMin;
+                double value = denominator > 0 ? (cdf[c][i] - cdfMin) / denominator : i / 255.0;
                 value = value * 255;
 
                 // Blend with original value using 'factor'
@@ -97,27 +90,20 @@ public class ImageProcessingService : IImageProcessingService
 
     private BitmapImage BitmapSourceToBitmapImage(BitmapSource bitmapSource)
     {
-        try
+        using (var memoryStream = new System.IO.MemoryStream())
         {
-            using (var memoryStream = new System.IO.MemoryStream())
-            {
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
-                encoder.Save(memoryStream);
-                memoryStream.Position = 0;
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+            encoder.Save(memoryStream);
+            memoryStream.Position = 0;
 
-                var bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.StreamSource = memoryStream;
-                bitmapImage.EndInit();
-                bitmapImage.Freeze();
-                return bitmapImage;
-            }
-        }
-        catch (Exception ex)
-        {
-            throw;
+            var bitmapImage = new BitmapImage();
+            bitmapImage.BeginInit();
+            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+            bitmapImage.StreamSource = memoryStream;
+            bitmapImage.EndInit();
+            bitmapImage.Freeze();
+            return bitmapImage;
         }
     }
 }

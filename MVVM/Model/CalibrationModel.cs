@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Windows.Media.Imaging;
 using MathNet.Numerics.LinearAlgebra;
-using MathNet.Numerics.Optimization;
-using MathNet.Numerics.LinearAlgebra.Double;
 
 namespace Filmauswertung_ModernUI.MVVM.Model
 {
@@ -288,10 +286,11 @@ namespace Filmauswertung_ModernUI.MVVM.Model
         }
         public static double[] FitInverseLinear(List<double> odValues, List<double> doseValues)
         {
-            if (odValues == null || doseValues == null || odValues.Count != doseValues.Count)
-                throw new ArgumentException("OD and Dose lists must be non-null and of the same length.");
+            if (odValues == null || doseValues == null || odValues.Count != doseValues.Count || odValues.Count < 3)
+                throw new ArgumentException("At least 3 paired OD and dose values are required for an inverse-linear fit.");
 
-            // Initial guess
+            // Fit OD = a0 + a1 / (dose - a2). Dose conversion uses
+            // the algebraically equivalent inverse: dose = a2 + a1 / (OD - a0).
             double a0 = odValues.Average();
             double b0 = 1.0;
             double c0 = doseValues.Min() * 0.1;
@@ -307,11 +306,11 @@ namespace Filmauswertung_ModernUI.MVVM.Model
                 double error = 0.0;
                 for (int i = 0; i < doseValues.Count; i++)
                 {
-                    double x = doseValues[i];
-                    double y = odValues[i];
-                    double xAdjusted = Math.Abs(x - c) < 1e-12 ? x + 1e-12 : x; // avoid division by zero
-                    double yFit = a + b / (xAdjusted - c);
-                    error += Math.Pow(y - yFit, 2);
+                    double dose = doseValues[i];
+                    double measuredOd = odValues[i];
+                    double adjustedDose = Math.Abs(dose - c) < 1e-12 ? dose + 1e-12 : dose;
+                    double fittedOd = a + b / (adjustedDose - c);
+                    error += Math.Pow(measuredOd - fittedOd, 2);
                 }
                 return error;
             };

@@ -7,11 +7,11 @@ using System.Windows;
 // Allgemeine Informationen über eine Assembly werden über die folgenden
 // Attribute gesteuert. Ändern Sie diese Attributwerte, um die Informationen zu ändern,
 // die einer Assembly zugeordnet sind.
-[assembly: AssemblyTitle("Filmausertung_ModernUI")]
+[assembly: AssemblyTitle("Filmauswertung_ModernUI")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Hewlett-Packard Company")]
-[assembly: AssemblyProduct("Filmausertung_ModernUI")]
+[assembly: AssemblyProduct("Filmauswertung_ModernUI")]
 [assembly: AssemblyCopyright("Copyright © Hewlett-Packard Company 2025")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -48,5 +48,5 @@ using System.Windows;
 //      Buildnummer
 //      Revision
 //
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]

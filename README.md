@@ -164,7 +164,6 @@ Filmauswertung_ModernUI/
 
 ## Known Limitations
 
-- Unit selection for dose conversion (marked as TODO in code)
 - OPG file format support is limited to specific metadata tags
 - Currently Windows-only (WPF limitation)
 
@@ -199,4 +198,4 @@ For questions or support, please open an issue on the GitHub repository.
 
 ---
 
-**Last Updated**: April 29, 2026
+**Last Updated**: October 1, 2026 (v1.0.1)
